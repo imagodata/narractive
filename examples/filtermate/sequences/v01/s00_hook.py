@@ -1,7 +1,7 @@
 """
 V01 Sequence 0 — HOOK (0:00 - 0:15)
 ====================================
-Ecran QGIS avec carte chargee, texte anime "1 million d'entites / 2 secondes".
+Ecran avec carte chargee, texte anime "1 million d'entites / 2 secondes".
 Transition vers logo FilterMate.
 
 Uses TimelineSequence for narration-synchronized execution.
@@ -20,10 +20,10 @@ class V01S00Hook(TimelineSequence):
     diagram_ids = []
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
+    def build_timeline(self, obs, app, config):
         scenes = config["obs"]["scenes"]
-        canvas = config["qgis"]["regions"].get("main_canvas", {})
-        qgis_scene = scenes.get("qgis_fullscreen", "QGIS Fullscreen")
+        canvas = config["app"]["regions"].get("main_canvas", {})
+        main_scene = scenes.get("app_fullscreen", "App Fullscreen")
 
         # Compute canvas center for mouse panning
         if canvas:
@@ -42,17 +42,17 @@ class V01S00Hook(TimelineSequence):
                     "Temps de réponse ? Deux secondes."
                 ),
                 sync="during",
-                actions=lambda: qgis.wait(2.0),  # Hold on intro card
+                actions=lambda: app.wait(2.0),  # Hold on intro card
                 post_delay=0.5,
             ),
             # Cue 1: Cut to QGIS — show map complexity
             NarrationCue(
                 label="Bienvenue dans FilterMate",
                 text="Bienvenue dans FilterMate.",
-                scene=qgis_scene,
+                scene=main_scene,
                 sync="before",  # Switch scene + focus, THEN narrate
                 actions=lambda: (
-                    qgis.focus_qgis(),
+                    app.focus_app(),
                 ),
                 post_delay=0.3,
             ),
@@ -66,9 +66,9 @@ class V01S00Hook(TimelineSequence):
                 ),
                 sync="during",
                 actions=lambda: (
-                    qgis.move_mouse_to(cx - 200, cy - 100, duration=1.5),
-                    qgis.wait(0.5),
-                    qgis.move_mouse_to(cx + 200, cy + 100, duration=1.5),
+                    app.move_mouse_to(cx - 200, cy - 100, duration=1.5),
+                    app.wait(0.5),
+                    app.move_mouse_to(cx + 200, cy + 100, duration=1.5),
                 ),
                 post_delay=1.0,
             ),

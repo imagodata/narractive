@@ -1,7 +1,7 @@
 """
 OBS Auto-Configuration Script
 ================================
-Creates the required OBS scenes and sources for FilterMate video production.
+Creates the required OBS scenes and sources for video production.
 Configures recording settings (MKV, x264, 1080p30).
 
 Usage:
@@ -12,14 +12,14 @@ Requirements:
   - obsws-python installed
 
 Scenes created:
-  1. QGIS Fullscreen       — Display capture, no FilterMate panel
-  2. QGIS + FilterMate     — Display capture, FilterMate visible
+  1. App Fullscreen        — Display capture, full application
+  2. App + Panel           — Display capture, side panel visible
   3. Diagram Overlay        — Browser source for Mermaid HTML diagrams
   4. Intro                  — Title card / animated intro
   5. Outro                  — End card with links
 
 Sources created in each scene:
-  - Display Capture (monitor 0) — for all QGIS scenes
+  - Display Capture (monitor 0) — for all application scenes
   - Browser Source              — for diagram overlay (points to localhost HTML)
   - Text (GDI+/FreeType)        — for intro/outro text
 """
@@ -44,8 +44,8 @@ DEFAULT_CONFIG = Path(__file__).parent.parent / "config.yaml"
 # ── Scene definitions ──────────────────────────────────────────────────────
 
 SCENES_TO_CREATE = [
-    "QGIS Fullscreen",
-    "QGIS + FilterMate",
+    "App Fullscreen",
+    "App + Panel",
     "Diagram Overlay",
     "Intro",
     "Outro",
@@ -103,9 +103,9 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
 
     time.sleep(0.5)  # Let OBS settle
 
-    # ── Add Display Capture to QGIS scenes ────────────────────────────────
-    qgis_scenes = ["QGIS Fullscreen", "QGIS + FilterMate"]
-    for scene_name in qgis_scenes:
+    # ── Add Display Capture to application scenes ──────────────────────────
+    app_scenes = ["App Fullscreen", "App + Panel"]
+    for scene_name in app_scenes:
         _add_source(client, scene_name, "Display Capture", "monitor_capture",
                     settings={"monitor": 0, "capture_cursor": True})
 
@@ -115,7 +115,7 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
     # We use the first diagram as default; the real setup switches files per-sequence
     default_diagram = diagram_dir / "01_positioning.html"
     browser_url = default_diagram.as_uri()
-    _add_source(client, "Diagram Overlay", "FilterMate Diagram", "browser_source",
+    _add_source(client, "Diagram Overlay", "Diagram", "browser_source",
                 settings={
                     "url": browser_url,
                     "width": 1920,
@@ -129,7 +129,7 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
     # ── Add Text sources for Intro/Outro ──────────────────────────────────
     _add_source(client, "Intro", "Intro Title", "text_gdiplus_v3",
                 settings={
-                    "text": "FilterMate\nFiltrage vectoriel pour QGIS",
+                    "text": config.get("app", {}).get("window_title", "Demo"),
                     "font": {"face": "Segoe UI", "size": 72, "bold": True},
                     "color": 0xFF4CAF50,
                     "align": "center",
@@ -137,11 +137,7 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
                 })
     _add_source(client, "Outro", "Outro Text", "text_gdiplus_v3",
                 settings={
-                    "text": (
-                        "FilterMate est disponible gratuitement\n"
-                        "github.com/imagodata/filter_mate\n"
-                        "plugins.qgis.org/plugins/filter_mate"
-                    ),
+                    "text": "Thank you for watching",
                     "font": {"face": "Segoe UI", "size": 48, "bold": False},
                     "color": 0xFFE0E0E0,
                     "align": "center",
@@ -149,7 +145,7 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
                 })
 
     # ── Configure recording settings ───────────────────────────────────────
-    output_dir = obs_cfg.get("output_dir", "C:/Users/Simon/Videos/FilterMate")
+    output_dir = obs_cfg.get("output_dir", str(Path.home() / "Videos"))
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     try:
         client.set_record_directory(output_dir)

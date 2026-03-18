@@ -9,7 +9,8 @@
 #   DISPLAY      — X display number (default :99)
 #   RESOLUTION   — Xvfb resolution (default 1920x1080x24)
 #   CAPTURE_FPS  — Frame capture rate (default 10)
-#   QGIS_PROJECT — Path to .qgz project file to open (optional)
+#   APP_COMMAND    — Command to launch the target application (optional)
+#   APP_WINDOW_TITLE — Window title to detect (optional)
 #   PROJECT_NAME — Project name for labeling (default: Video)
 # =============================================================================
 
@@ -57,30 +58,35 @@ sleep 1
 echo "[3/4] Starting dbus session..."
 eval "$(dbus-launch --sh-syntax)" 2>/dev/null || true
 
-# ── 4. Launch QGIS if a project is specified ─────────────────────────────────
-if [ -n "${QGIS_PROJECT:-}" ] && [ -f "$QGIS_PROJECT" ]; then
-    echo "[4/4] Launching QGIS with project: $QGIS_PROJECT"
-    qgis --nologo --noplugins "$QGIS_PROJECT" &
-    QGIS_PID=$!
-    for i in $(seq 1 60); do
-        if xdotool search --name "QGIS" >/dev/null 2>&1; then
-            echo "       QGIS window detected."
-            break
+# ── 4. Launch application if specified ────────────────────────────────────────
+APP_COMMAND="${APP_COMMAND:-}"
+APP_WINDOW_TITLE="${APP_WINDOW_TITLE:-}"
+
+if [ -n "$APP_COMMAND" ]; then
+    echo "[4/4] Launching application: $APP_COMMAND"
+    eval "$APP_COMMAND" &
+    APP_PID=$!
+    if [ -n "$APP_WINDOW_TITLE" ]; then
+        for i in $(seq 1 60); do
+            if xdotool search --name "$APP_WINDOW_TITLE" >/dev/null 2>&1; then
+                echo "       Application window detected."
+                break
+            fi
+            if [ "$i" -eq 60 ]; then
+                echo "WARNING: Application window not detected after 60s."
+            fi
+            sleep 1
+        done
+        WID=$(xdotool search --name "$APP_WINDOW_TITLE" 2>/dev/null | head -1 || true)
+        if [ -n "$WID" ]; then
+            xdotool windowactivate "$WID"
+            xdotool windowsize "$WID" 1920 1080
+            xdotool windowmove "$WID" 0 0
+            echo "       Application window maximized to 1920x1080."
         fi
-        if [ "$i" -eq 60 ]; then
-            echo "WARNING: QGIS window not detected after 60s."
-        fi
-        sleep 1
-    done
-    WID=$(xdotool search --name "QGIS" 2>/dev/null | head -1 || true)
-    if [ -n "$WID" ]; then
-        xdotool windowactivate "$WID"
-        xdotool windowsize "$WID" 1920 1080
-        xdotool windowmove "$WID" 0 0
-        echo "       QGIS window maximized to 1920x1080."
     fi
 else
-    echo "[4/4] No QGIS_PROJECT specified — skipping QGIS launch."
+    echo "[4/4] No APP_COMMAND specified — skipping application launch."
 fi
 
 # ── 5. Run the video automation ──────────────────────────────────────────────
@@ -95,7 +101,7 @@ EXIT_CODE=$?
 echo ""
 echo "Cleaning up..."
 kill "$WM_PID" 2>/dev/null || true
-kill "${QGIS_PID:-}" 2>/dev/null || true
+kill "${APP_PID:-}" 2>/dev/null || true
 kill "$XVFB_PID" 2>/dev/null || true
 
 exit $EXIT_CODE

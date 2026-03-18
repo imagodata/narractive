@@ -18,12 +18,12 @@ class V01S01Install(TimelineSequence):
     name = "V01 — Activation couches + Installation"
     sequence_id = "v01_s01"
     duration_estimate = 30.0
-    obs_scene = "QGIS Fullscreen"
+    obs_scene = "App Fullscreen"
     diagram_ids = ["v01_install_flow"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
-        regions = config["qgis"]["regions"]
+    def build_timeline(self, obs, app, config):
+        regions = config["app"]["regions"]
 
         def toggle_layer_departements():
             self._log.info("Toggling visibility for 'departements'")
@@ -41,21 +41,21 @@ class V01S01Install(TimelineSequence):
 
         def open_plugin_manager():
             self._log.info("Opening Plugin Manager")
-            qgis.open_plugin_manager()
+            app.open_plugin_manager()
 
         def click_all_tab():
             self._log.info("Clicking 'All' tab")
             all_tab = regions.get("plugin_manager_all_tab")
             if all_tab:
                 pyautogui.click(all_tab["x"], all_tab["y"])
-                qgis.wait(0.5)
+                app.wait(0.5)
 
         def search_filtermate():
             self._log.info("Searching 'FilterMate'")
             search_bar = regions.get("plugin_manager_search")
             if search_bar:
                 pyautogui.click(search_bar["x"], search_bar["y"])
-                qgis.wait(0.3)
+                app.wait(0.3)
             pyautogui.hotkey("ctrl", "a")
             pyautogui.typewrite("FilterMate", interval=0.08)
 
@@ -64,13 +64,13 @@ class V01S01Install(TimelineSequence):
             plugin_entry = regions.get("plugin_manager_entry")
             if plugin_entry:
                 pyautogui.click(plugin_entry["x"], plugin_entry["y"])
-            qgis.wait(1.0)
+            app.wait(1.0)
             self._log.info("Hovering Install button")
-            qgis.hover_region("plugin_manager_install_btn", duration=1.5)
+            app.hover_region("plugin_manager_install_btn", duration=1.5)
 
         def show_diagram_and_close():
             self.show_diagram(obs, "v01_install_flow", duration=5.0)
-            qgis.close_dialog()
+            app.close_dialog()
 
         return [
             # Cue 0: Introduce the project layers
@@ -81,7 +81,7 @@ class V01S01Install(TimelineSequence):
                     "les départements de France et les communes."
                 ),
                 sync="during",
-                actions=lambda: qgis.focus_qgis(),
+                actions=lambda: app.focus_app(),
                 post_delay=0.5,
             ),
             # Cue 1: Activate layers
@@ -94,7 +94,7 @@ class V01S01Install(TimelineSequence):
                 sync="during",
                 actions=lambda: (
                     toggle_layer_departements(),
-                    qgis.wait(1.0),
+                    app.wait(1.0),
                     toggle_layer_communes(),
                 ),
                 post_delay=0.5,

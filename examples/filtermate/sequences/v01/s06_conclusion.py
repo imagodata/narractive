@@ -16,11 +16,11 @@ class V01S06Conclusion(TimelineSequence):
     name = "V01 — Persistance & Conclusion"
     sequence_id = "v01_s06"
     duration_estimate = 25.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["v01_persistence"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
+    def build_timeline(self, obs, app, config):
         scenes = config["obs"]["scenes"]
         outro_scene = scenes.get("outro_scene", "Outro")
 
@@ -36,8 +36,8 @@ class V01S06Conclusion(TimelineSequence):
                 ),
                 sync="during",
                 actions=lambda: (
-                    qgis.focus_filtermate(),
-                    qgis.highlight_area("filtermate_dock", duration=2.0),
+                    app.focus_panel(),
+                    app.highlight_area("filtermate_dock", duration=2.0),
                 ),
                 post_delay=0.3,
             ),
@@ -64,7 +64,7 @@ class V01S06Conclusion(TimelineSequence):
                 ),
                 scene=outro_scene,
                 sync="before",
-                actions=lambda: qgis.wait(1.0),
+                actions=lambda: app.wait(1.0),
                 post_delay=0.5,
             ),
             # Cue 3: Resources + CTA
@@ -79,7 +79,7 @@ class V01S06Conclusion(TimelineSequence):
                     "À très vite !"
                 ),
                 sync="during",
-                actions=lambda: qgis.wait(8.0),  # Hold on outro card
+                actions=lambda: app.wait(8.0),  # Hold on outro card
                 post_delay=1.0,
             ),
         ]

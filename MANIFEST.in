@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+include config.template.yaml
+include requirements.txt
+
+recursive-include video_automation/diagrams *.html

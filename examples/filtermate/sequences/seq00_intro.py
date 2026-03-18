@@ -1,7 +1,7 @@
 """
 Séquence 0 — INTRO + HOOK (0:20)
 =================================
-Visuel: Écran QGIS avec carte complexe, 10+ layers chargés.
+Visuel: Écran avec carte complexe, 10+ layers chargés.
 Hook : frustration → FilterMate s'ouvre → filtre en 1 clic.
 """
 
@@ -23,42 +23,42 @@ class Seq00Intro(VideoSequence):
         "C'est exactement ce que fait FilterMate."
     )
 
-    def setup(self, obs, qgis, config):
+    def setup(self, obs, app, config):
         # Switch to the dedicated Intro scene (animated logo / title card)
         obs.transition_to_intro()
-        qgis.wait(2.0)
+        app.wait(2.0)
 
-    def execute(self, obs, qgis, config):
+    def execute(self, obs, app, config):
         """
         Play the intro slide for the configured duration, then
         transition to QGIS to tease the interface.
         """
         # 1. Intro title card plays for ~10s (narration fills the time)
-        qgis.wait(10.0)
+        app.wait(10.0)
 
         # 2. Cut to QGIS Fullscreen — show a loaded project with many layers
-        obs.switch_scene(obs.scenes.get("qgis_fullscreen", "QGIS Fullscreen"))
-        qgis.focus_qgis()
-        qgis.wait(2.0)
+        obs.switch_scene(obs.scenes.get("app_fullscreen", "App Fullscreen"))
+        app.focus_app()
+        app.wait(2.0)
 
         # 3. Pan mouse around the layer panel to show complexity
-        regions = config.get("qgis", {}).get("regions", {})
+        regions = config.get("app", {}).get("regions", {})
         canvas = regions.get("main_canvas", {})
         if canvas:
             cx = canvas.get("x", 960)
             cy = canvas.get("y", 400)
             # Slow pan across the map
-            qgis.move_mouse_to(cx - 200, cy - 100, duration=1.5)
-            qgis.wait(1.0)
-            qgis.move_mouse_to(cx + 200, cy + 100, duration=1.5)
-            qgis.wait(1.0)
+            app.move_mouse_to(cx - 200, cy - 100, duration=1.5)
+            app.wait(1.0)
+            app.move_mouse_to(cx + 200, cy + 100, duration=1.5)
+            app.wait(1.0)
 
         # 4. Switch to QGIS + FilterMate scene — the dock is now visible
-        obs.switch_scene(obs.scenes.get("qgis_with_filtermate", "QGIS + FilterMate"))
-        qgis.focus_filtermate()
-        qgis.wait(2.0)
+        obs.switch_scene(obs.scenes.get("app_with_panel", "App + Panel"))
+        app.focus_panel()
+        app.wait(2.0)
 
-    def teardown(self, obs, qgis, config):
+    def teardown(self, obs, app, config):
         # Return to main scene
-        obs.transition_to_qgis()
-        super().teardown(obs, qgis, config)
+        obs.transition_to_main()
+        super().teardown(obs, app, config)

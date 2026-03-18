@@ -40,6 +40,8 @@ class DiagramGenerator:
         self.theme: str = config.get("theme", "dark")
         self.bg_color: str = config.get("background_color", "#1a1a2e")
         self.font_family: str = config.get("font_family", "Segoe UI")
+        self.subtitle: str = config.get("subtitle", "")
+        self.footer_url: str = config.get("footer_url", "")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
@@ -209,6 +211,8 @@ class DiagramGenerator:
             return (
                 template
                 .replace("{{TITLE}}", title)
+                .replace("{{SUBTITLE}}", self.subtitle)
+                .replace("{{FOOTER_URL}}", self.footer_url)
                 .replace("{{MERMAID_CODE}}", mermaid_code)
                 .replace("{{BG_COLOR}}", self.bg_color)
                 .replace("{{FONT_FAMILY}}", self.font_family)
@@ -217,6 +221,8 @@ class DiagramGenerator:
         # Inline fallback template
         return _INLINE_TEMPLATE.format(
             title=title,
+            subtitle=self.subtitle,
+            footer_url=self.footer_url,
             mermaid_code=mermaid_code,
             bg_color=self.bg_color,
             font_family=self.font_family,
@@ -331,7 +337,7 @@ _INLINE_TEMPLATE = """\
   <div class="title-bar">
     <div class="logo">F</div>
     <div class="title-text">{title}</div>
-    <div class="subtitle">FilterMate v4.6.1</div>
+    <div class="subtitle">{subtitle}</div>
   </div>
   <div class="diagram-wrapper">
     <div class="mermaid">
@@ -339,8 +345,8 @@ _INLINE_TEMPLATE = """\
     </div>
   </div>
   <div class="footer">
-    <span>FilterMate — QGIS Plugin</span>
-    <span>github.com/imagodata/filter_mate</span>
+    <span>{title}</span>
+    <span>{footer_url}</span>
   </div>
 </div>
 <script>

@@ -20,28 +20,28 @@ class V01S02FirstLaunch(TimelineSequence):
     name = "V01 — Premier lancement"
     sequence_id = "v01_s02"
     duration_estimate = 95.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["v01_interface_zones", "v01_display_field_detection"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
-        regions = config["qgis"]["regions"]
+    def build_timeline(self, obs, app, config):
+        regions = config["app"]["regions"]
         move_dur = config["timing"].get("mouse_move_duration", 0.5)
 
         def show_tabs_cycle():
             """Cycle through toolbox tabs without hovering individual buttons."""
-            qgis.highlight_area("toolbox_zone", duration=2.5)
+            app.highlight_area("toolbox_zone", duration=2.5)
             # FILTERING
-            qgis.select_tab("FILTERING")
-            qgis.wait(0.8)
+            app.select_tab("FILTERING")
+            app.wait(0.8)
             # EXPORTING
-            qgis.select_tab("EXPORTING")
-            qgis.wait(0.8)
+            app.select_tab("EXPORTING")
+            app.wait(0.8)
             # CONFIGURATION
-            qgis.select_tab("CONFIGURATION")
-            qgis.wait(0.8)
+            app.select_tab("CONFIGURATION")
+            app.wait(0.8)
             # Retour FILTERING
-            qgis.select_tab("FILTERING")
+            app.select_tab("FILTERING")
 
         def click_prev_then_next():
             """Click prev to go to previous department, then next to return."""
@@ -49,28 +49,28 @@ class V01S02FirstLaunch(TimelineSequence):
             btn_next = regions.get("exploring_feature_next_btn")
             if btn_prev:
                 pyautogui.click(btn_prev["x"], btn_prev["y"], duration=move_dur)
-            qgis.wait(1.5)
+            app.wait(1.5)
             if btn_next:
                 pyautogui.click(btn_next["x"], btn_next["y"], duration=move_dur)
-            qgis.wait(1.0)
+            app.wait(1.0)
 
         def activate_auto_current_layer():
             """Enable auto-sync between layer tree and source layer combo."""
             self._log.info("Activating auto current layer sync")
-            qgis.click_at("btn_auto_current_layer")
-            qgis.wait(0.5)
+            app.click_at("btn_auto_current_layer")
+            app.wait(0.5)
 
         def click_layer_communes():
             """Click communes in QGIS layer panel to switch source layer."""
             self._log.info("Clicking communes in layer panel")
-            qgis.click_at("layer_panel_name_communes")
-            qgis.wait(1.0)
+            app.click_at("layer_panel_name_communes")
+            app.wait(1.0)
 
         def click_layer_departements():
             """Click departements in QGIS layer panel to switch back."""
             self._log.info("Clicking departements in layer panel")
-            qgis.click_at("layer_panel_name_departements")
-            qgis.wait(1.0)
+            app.click_at("layer_panel_name_departements")
+            app.wait(1.0)
 
         return [
             # Cue 0: Open FilterMate — dock is empty
@@ -83,8 +83,8 @@ class V01S02FirstLaunch(TimelineSequence):
                 ),
                 sync="during",
                 actions=lambda: (
-                    qgis.focus_qgis(),
-                    qgis.open_filtermate_toolbar(),
+                    app.focus_app(),
+                    app.open_filtermate_toolbar(),
                 ),
                 post_delay=0.5,
             ),
@@ -99,7 +99,7 @@ class V01S02FirstLaunch(TimelineSequence):
                     "séparées par un splitter vertical."
                 ),
                 sync="during",
-                actions=lambda: qgis.focus_filtermate(),
+                actions=lambda: app.focus_panel(),
                 post_delay=0.5,
             ),
             # Cue 2: Zone A — Exploring Zone
@@ -111,7 +111,7 @@ class V01S02FirstLaunch(TimelineSequence):
                     "les entités de vos couches."
                 ),
                 sync="during",
-                actions=lambda: qgis.highlight_area("exploring_zone", duration=3.0),
+                actions=lambda: app.highlight_area("exploring_zone", duration=3.0),
                 post_delay=0.3,
             ),
             # Cue 3: Zone B — Toolbox + cycle des onglets
@@ -135,8 +135,8 @@ class V01S02FirstLaunch(TimelineSequence):
                 ),
                 sync="during",
                 actions=lambda: (
-                    qgis.hover_region("badge_favorites", duration=1.5),
-                    qgis.hover_region("badge_backend", duration=1.5),
+                    app.hover_region("badge_favorites", duration=1.5),
+                    app.hover_region("badge_backend", duration=1.5),
                 ),
                 post_delay=0.3,
             ),
@@ -145,7 +145,7 @@ class V01S02FirstLaunch(TimelineSequence):
                 label="Diagramme zones",
                 text="",
                 actions=lambda: self.show_diagram_and_return(
-                    obs, qgis, "v01_interface_zones", duration=5.0
+                    obs, app, "v01_interface_zones", duration=5.0
                 ),
                 post_delay=0.5,
             ),
@@ -163,10 +163,10 @@ class V01S02FirstLaunch(TimelineSequence):
                 sync="during",
                 actions=lambda: (
                     self._log.info("Switching to FILTERING tab"),
-                    qgis.select_tab("FILTERING"),
-                    qgis.wait(0.5),
+                    app.select_tab("FILTERING"),
+                    app.wait(0.5),
                     self._log.info("Selecting source layer 'departements'"),
-                    qgis.select_layer("departements", index=1),
+                    app.select_layer("departements", index=1),
                 ),
                 post_delay=0.5,
             ),
@@ -218,13 +218,13 @@ class V01S02FirstLaunch(TimelineSequence):
                         regions["exploring_display_field_combo"]["y"],
                         duration=move_dur,
                     ),
-                    qgis.wait(0.3),
+                    app.wait(0.3),
                     pyautogui.hotkey("ctrl", "a"),
-                    qgis.wait(0.1),
-                    qgis.type_text_unicode("NOM_DEPT"),
-                    qgis.wait(0.5),
+                    app.wait(0.1),
+                    app.type_text_unicode("NOM_DEPT"),
+                    app.wait(0.5),
                     pyautogui.press("enter"),
-                    qgis.wait(0.5),
+                    app.wait(0.5),
                 ),
                 post_delay=0.5,
             ),
@@ -243,11 +243,11 @@ class V01S02FirstLaunch(TimelineSequence):
                         regions["exploring_feature_selector"]["y"],
                         duration=move_dur,
                     ),
-                    qgis.wait(0.5),
+                    app.wait(0.5),
                     pyautogui.press("down"),
-                    qgis.wait(0.8),
+                    app.wait(0.8),
                     pyautogui.press("down"),
-                    qgis.wait(0.8),
+                    app.wait(0.8),
                 ),
                 post_delay=0.5,
             ),
@@ -269,7 +269,7 @@ class V01S02FirstLaunch(TimelineSequence):
                 text="C'est automatique.",
                 sync="during",
                 actions=lambda: self.show_diagram_and_return(
-                    obs, qgis, "v01_display_field_detection", duration=5.0
+                    obs, app, "v01_display_field_detection", duration=5.0
                 ),
                 post_delay=0.5,
             ),

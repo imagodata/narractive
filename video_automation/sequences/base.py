@@ -17,15 +17,29 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from video_automation.core.frame_capturer import FrameCapturer
-    from video_automation.core.obs_controller import OBSController
-    from video_automation.core.qgis_automator import QGISAutomator
+    from video_automation.core.app_automator import AppAutomator
     from video_automation.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
 
-    Recorder = Union[OBSController, FrameCapturer]
+
+@runtime_checkable
+class Recorder(Protocol):
+    """Protocol that both OBSController and FrameCapturer implement."""
+
+    def connect(self) -> None: ...
+    def disconnect(self) -> None: ...
+    def start_recording(self) -> None: ...
+    def stop_recording(self) -> str | None: ...
+    def pause_recording(self) -> None: ...
+    def resume_recording(self) -> None: ...
+    def wait_for_recording_start(self, timeout: float = ...) -> None: ...
+    def switch_scene(self, scene_name: str) -> None: ...
+    def get_current_scene(self) -> str: ...
+    def show_diagram_overlay(self, visible: bool) -> None: ...
+    def __enter__(self) -> "Recorder": ...
+    def __exit__(self, *args: object) -> None: ...
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +71,7 @@ class VideoSequence(ABC):
     duration_estimate: float = 30.0
     narration_text: str = ""
     diagram_ids: list[str] = []
-    obs_scene: str = "QGIS Fullscreen"
+    obs_scene: str = "Main"
 
     # Populated after execution for TimelineSequence; always None for legacy.
     timeline_result: Optional["TimelineResult"] = None
@@ -70,9 +84,9 @@ class VideoSequence(ABC):
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def setup(self, obs: "Recorder", qgis: "QGISAutomator", config: dict) -> None:
+    def setup(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """
-        Called before recording starts. Switch OBS scene, focus QGIS, etc.
+        Called before recording starts. Switch scene, focus the app, etc.
         Override to add sequence-specific setup.
         """
         self._log.info("=== SETUP: %s ===", self.name)
@@ -81,19 +95,19 @@ class VideoSequence(ABC):
         except Exception as exc:  # noqa: BLE001
             self._log.warning("Scene switch failed: %s", exc)
 
-        qgis.focus_qgis()
+        app.focus_app()
         transition_pause = config.get("timing", {}).get("transition_pause", 2.0)
         time.sleep(transition_pause)
 
     @abstractmethod
-    def execute(self, obs: "Recorder", qgis: "QGISAutomator", config: dict) -> None:
+    def execute(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """
         Main automation steps for this sequence.
         Must be implemented by each subclass.
         """
         ...
 
-    def teardown(self, obs: "Recorder", qgis: "QGISAutomator", config: dict) -> None:
+    def teardown(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """
         Called after the sequence finishes. Pause before next sequence.
         Override if cleanup is needed.
@@ -106,15 +120,15 @@ class VideoSequence(ABC):
     # Convenience helpers
     # ------------------------------------------------------------------
 
-    def run(self, obs: "Recorder", qgis: "QGISAutomator", config: dict) -> None:
+    def run(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """Run the full sequence: setup -> execute -> teardown."""
         self._start_time = time.time()
         self._log.info("Starting sequence: %s", self.name)
         try:
-            self.setup(obs, qgis, config)
-            self.execute(obs, qgis, config)
+            self.setup(obs, app, config)
+            self.execute(obs, app, config)
         finally:
-            self.teardown(obs, qgis, config)
+            self.teardown(obs, app, config)
 
     def elapsed(self) -> float:
         """Return elapsed seconds since sequence started."""
@@ -122,7 +136,7 @@ class VideoSequence(ABC):
 
     def edit_config_value(
         self,
-        qgis: "QGISAutomator",
+        app: "AppAutomator",
         config: dict,
         region_name: str,
         value: str,
@@ -130,32 +144,32 @@ class VideoSequence(ABC):
         """Double-click a config field, clear it, type *value* and confirm."""
         import pyautogui
 
-        region = config["qgis"]["regions"].get(region_name)
+        region = config["app"]["regions"].get(region_name)
         if not region:
             self._log.warning("%s not calibrated -- skipping", region_name)
             return False
         move_dur = config["timing"].get("mouse_move_duration", 0.5)
         pyautogui.click(region["x"], region["y"], duration=move_dur)
-        qgis.wait(0.3)
+        app.wait(0.3)
         pyautogui.doubleClick(region["x"], region["y"])
-        qgis.wait(0.3)
+        app.wait(0.3)
         pyautogui.hotkey("ctrl", "a")
         pyautogui.typewrite(value, interval=0.06)
         pyautogui.press("return")
-        qgis.wait(0.5)
+        app.wait(0.5)
         return True
 
     def show_diagram_and_return(
         self,
         obs: "Recorder",
-        qgis: "QGISAutomator",
+        app: "AppAutomator",
         diagram_id: str,
         duration: float = 5.0,
     ) -> None:
-        """Show a diagram overlay then return focus to the plugin panel."""
+        """Show a diagram overlay then return focus to the side panel."""
         self.show_diagram(obs, diagram_id, duration=duration)
-        qgis.focus_plugin_panel()
-        qgis.wait(0.5)
+        app.focus_panel()
+        app.wait(0.5)
 
     def show_diagram(self, obs: "Recorder", diagram_id: str, duration: float = 5.0) -> None:
         """Switch to the Diagram Overlay scene, wait, then switch back."""
@@ -190,7 +204,7 @@ class TimelineSequence(VideoSequence):
     def build_timeline(
         self,
         obs: "Recorder",
-        qgis: "QGISAutomator",
+        app: "AppAutomator",
         config: dict,
     ) -> list["NarrationCue"]:
         """
@@ -201,12 +215,12 @@ class TimelineSequence(VideoSequence):
             f"{self.__class__.__name__} must implement build_timeline()"
         )
 
-    def execute(self, obs: "Recorder", qgis: "QGISAutomator", config: dict) -> None:
+    def execute(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """Execute the timeline: prepare narration audio, then run cues."""
         from video_automation.core.narrator import Narrator
         from video_automation.core.timeline import TimelineExecutor
 
-        cues = self.build_timeline(obs, qgis, config)
+        cues = self.build_timeline(obs, app, config)
         if not cues:
             self._log.warning("No cues defined for %s", self.name)
             return

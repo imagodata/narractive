@@ -27,28 +27,28 @@ class V01S03Sidebar(TimelineSequence):
     name = "V01 — Barre latérale (6 boutons)"
     sequence_id = "v01_s03"
     duration_estimate = 55.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["v01_sidebar_buttons"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
+    def build_timeline(self, obs, app, config):
 
         def demo_identify():
             """Identify: click → flash the current entity."""
-            qgis.click_at("sidebar_identify")
-            qgis.wait(2.0)
+            app.click_at("sidebar_identify")
+            app.wait(2.0)
 
         def demo_zoom():
             """Zoom: click → center and fit map."""
-            qgis.click_at("sidebar_zoom")
-            qgis.wait(2.0)
+            app.click_at("sidebar_zoom")
+            app.wait(2.0)
 
         def demo_link():
             """Link: toggle OFF then back ON to show the effect."""
-            qgis.click_at("sidebar_link")
-            qgis.wait(1.0)
-            qgis.click_at("sidebar_link")
-            qgis.wait(1.0)
+            app.click_at("sidebar_link")
+            app.wait(1.0)
+            app.click_at("sidebar_link")
+            app.wait(1.0)
 
         return [
             # Cue 0: Introduction — single focus, no extra hover
@@ -59,7 +59,7 @@ class V01S03Sidebar(TimelineSequence):
                     "dans sa barre latérale. Voyons-les en action."
                 ),
                 sync="during",
-                actions=lambda: qgis.focus_filtermate(),
+                actions=lambda: app.focus_panel(),
                 post_delay=0.3,
             ),
             # Cue 1: Identify — click → flash
@@ -139,7 +139,7 @@ class V01S03Sidebar(TimelineSequence):
                     "pour garder notre contexte."
                 ),
                 sync="during",
-                actions=lambda: qgis.hover_region("sidebar_reset", duration=2.5),
+                actions=lambda: app.hover_region("sidebar_reset", duration=2.5),
                 post_delay=0.3,
             ),
             # Cue 7: Diagram recap
@@ -147,7 +147,7 @@ class V01S03Sidebar(TimelineSequence):
                 label="Diagramme sidebar",
                 text="",
                 actions=lambda: self.show_diagram_and_return(
-                    obs, qgis, "v01_sidebar_buttons", duration=5.0
+                    obs, app, "v01_sidebar_buttons", duration=5.0
                 ),
                 post_delay=0.5,
             ),

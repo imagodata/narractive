@@ -8,15 +8,15 @@ to match the voiceover.
 Usage in a sequence::
 
     class MySequence(TimelineSequence):
-        def build_timeline(self, obs, qgis, config):
+        def build_timeline(self, obs, app, config):
             return [
                 NarrationCue(
-                    text="Bienvenue dans FilterMate.",
-                    actions=lambda: qgis.wait(1.0),
+                    text="Welcome to the demo.",
+                    actions=lambda: app.wait(1.0),
                 ),
                 NarrationCue(
-                    text="Ouvrons le plugin.",
-                    actions=lambda: qgis.open_filtermate_toolbar(),
+                    text="Let's open the panel.",
+                    actions=lambda: app.focus_panel(),
                     post_delay=1.0,
                 ),
             ]
@@ -50,7 +50,7 @@ class NarrationCue:
         Narration text for TTS. Empty string = silent cue (just actions).
     actions : callable or None
         UI actions to execute during this cue.  Called with no arguments.
-        Use a lambda or closure that captures ``obs``, ``qgis``, ``config``.
+        Use a lambda or closure that captures ``obs``, ``app``, ``config``.
     sync : str
         When to run actions relative to narration:
         - ``"during"``: start actions immediately, narration plays in parallel.

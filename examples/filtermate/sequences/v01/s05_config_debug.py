@@ -3,7 +3,7 @@ V01 Sequence 5 — CONFIGURATION & DEBUG
 ========================================
 - Changement de langue (22 langues)
 - Mode verbose (FEEDBACK_LEVEL)
-- Panneau de logs QGIS
+- Panneau de logs
 
 Uses TimelineSequence for narration-synchronized execution.
 """
@@ -19,67 +19,67 @@ class V01S05ConfigDebug(TimelineSequence):
     name = "V01 — Configuration & Debug"
     sequence_id = "v01_s05"
     duration_estimate = 45.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + FilterMate"
     diagram_ids = ["v01_languages", "v01_feedback_levels"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
-        regions = config["qgis"]["regions"]
+    def build_timeline(self, obs, app, config):
+        regions = config["app"]["regions"]
         move_dur = config["timing"].get("mouse_move_duration", 0.5)
 
         def change_language_to_en():
-            qgis.open_filtermate_config()
-            qgis.wait(1.0)
-            self.edit_config_value(qgis, config, "about_config_language_field", "en")
-            qgis.close_dialog()
-            qgis.wait(0.5)
+            app.open_filtermate_config()
+            app.wait(1.0)
+            self.edit_config_value(app, config, "about_config_language_field", "en")
+            app.close_dialog()
+            app.wait(0.5)
 
         def show_english_interface():
-            qgis.focus_filtermate()
-            qgis.wait(1.5)
+            app.focus_panel()
+            app.wait(1.5)
 
         def restore_language_to_fr():
-            qgis.open_filtermate_config()
-            qgis.wait(1.0)
-            self.edit_config_value(qgis, config, "about_config_language_field", "fr")
-            qgis.close_dialog()
-            qgis.wait(0.5)
+            app.open_filtermate_config()
+            app.wait(1.0)
+            self.edit_config_value(app, config, "about_config_language_field", "fr")
+            app.close_dialog()
+            app.wait(0.5)
 
         def change_feedback_to_verbose():
-            qgis.open_filtermate_config()
-            qgis.wait(1.0)
+            app.open_filtermate_config()
+            app.wait(1.0)
             self.edit_config_value(
-                qgis, config, "about_config_feedback_level_field", "verbose"
+                app, config, "about_config_feedback_level_field", "verbose"
             )
-            qgis.close_dialog()
-            qgis.wait(0.5)
+            app.close_dialog()
+            app.wait(0.5)
 
         def trigger_filter_verbose():
-            qgis.select_tab("FILTERING")
-            qgis.wait(0.5)
-            qgis.click_action_button("filter")
-            qgis.wait(2.5)
+            app.select_tab("FILTERING")
+            app.wait(0.5)
+            app.click_action_button("filter")
+            app.wait(2.5)
 
         def open_log_panel():
-            qgis.focus_qgis()
-            qgis.wait(0.5)
-            qgis.open_log_messages_panel()
-            qgis.wait(1.5)
+            app.focus_app()
+            app.wait(0.5)
+            app.open_log_messages_panel()
+            app.wait(1.5)
             log_tab = regions.get("log_panel_filtermate_tab")
             if log_tab:
                 pyautogui.click(log_tab["x"], log_tab["y"], duration=move_dur)
-            qgis.wait(2.0)
+            app.wait(2.0)
 
         def trigger_filter_and_show_log():
-            qgis.select_tab("FILTERING")
-            qgis.wait(0.3)
-            qgis.click_action_button("filter")
-            qgis.wait(2.0)
+            app.select_tab("FILTERING")
+            app.wait(0.3)
+            app.click_action_button("filter")
+            app.wait(2.0)
             # Show new entries in log
             log_tab = regions.get("log_panel_filtermate_tab")
             if log_tab:
                 pyautogui.click(log_tab["x"], log_tab["y"], duration=move_dur)
-            qgis.wait(1.5)
+            app.wait(1.5)
 
         return [
             # --- LANGUAGE ---
@@ -91,7 +91,7 @@ class V01S05ConfigDebug(TimelineSequence):
                     "allemand, chinois, japonais, arabe..."
                 ),
                 sync="during",
-                actions=lambda: qgis.focus_filtermate(),
+                actions=lambda: app.focus_panel(),
                 post_delay=0.3,
             ),
             # Cue 1: Change language
@@ -171,11 +171,11 @@ class V01S05ConfigDebug(TimelineSequence):
             NarrationCue(
                 label="Panneau de logs",
                 text=(
-                    "En complément, FilterMate écrit ses logs dans le panneau standard de QGIS. "
+                    "En complément, FilterMate écrit ses logs dans le panneau standard. "
                     "Allez dans Vue, Panneaux, Messages de log. "
                     "Vous trouverez un onglet dédié FilterMate."
                 ),
-                scene=config["obs"]["scenes"].get("qgis_fullscreen", "QGIS Fullscreen"),
+                scene=config["obs"]["scenes"].get("app_fullscreen", "App Fullscreen"),
                 sync="during",
                 actions=lambda: open_log_panel(),
                 post_delay=0.3,

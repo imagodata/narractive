@@ -1,7 +1,7 @@
 """
 Interactive Calibration Tool
 =============================
-Records QGIS and FilterMate UI element positions by asking the user to
+Records UI element positions by asking the user to
 position the mouse on specific areas. Saves results to config.yaml.
 
 Features:
@@ -59,13 +59,13 @@ GROUPS: dict[str, dict] = {
         ],
     },
     "canvas": {
-        "label": "Canvas QGIS + Toolbar",
-        "desc": "Zones principales de QGIS",
+        "label": "Canvas + Toolbar",
+        "desc": "Zones principales de l'application",
         "targets": [
-            ("main_canvas", "coin HAUT-GAUCHE du canvas carte QGIS", "tl"),
-            ("main_canvas", "coin BAS-DROITE du canvas carte QGIS", "br"),
-            ("toolbar", "coin HAUT-GAUCHE de la barre d'outils QGIS", "tl"),
-            ("toolbar", "coin BAS-DROITE de la barre d'outils QGIS", "br"),
+            ("main_canvas", "coin HAUT-GAUCHE du canvas carte", "tl"),
+            ("main_canvas", "coin BAS-DROITE du canvas carte", "br"),
+            ("toolbar", "coin HAUT-GAUCHE de la barre d'outils", "tl"),
+            ("toolbar", "coin BAS-DROITE de la barre d'outils", "br"),
         ],
     },
     "header": {
@@ -144,8 +144,8 @@ GROUPS: dict[str, dict] = {
         ],
     },
     "menus": {
-        "label": "Menus QGIS (barre de menu)",
-        "desc": "Positions des menus dans la barre de menu QGIS",
+        "label": "Menus (barre de menu)",
+        "desc": "Positions des menus dans la barre de menu",
         "targets": [
             ("menu_settings", "le menu PARAMETRES / SETTINGS dans la barre de menu", "point"),
             ("menu_extensions", "le menu EXTENSIONS / PLUGINS dans la barre de menu", "point"),
@@ -158,20 +158,20 @@ GROUPS: dict[str, dict] = {
         "timer": 5,
         "targets": [
             ("menu_extensions_manage", "l'entree GERER LES EXTENSIONS", "point",
-             "Ouvrez le menu EXTENSIONS dans la barre de menu QGIS"),
+             "Ouvrez le menu EXTENSIONS dans la barre de menu"),
             ("menu_settings_options", "l'entree OPTIONS...", "point",
-             "Ouvrez le menu PARAMETRES / SETTINGS dans la barre de menu QGIS"),
+             "Ouvrez le menu PARAMETRES / SETTINGS dans la barre de menu"),
             ("menu_view_panels", "le sous-menu PANNEAUX", "point",
-             "Ouvrez le menu VUE / VIEW dans la barre de menu QGIS"),
+             "Ouvrez le menu VUE / VIEW dans la barre de menu"),
             ("menu_view_panels_log", "l'entree MESSAGES DE LOG", "point",
              "Ouvrez VUE > PANNEAUX (sous-menu deja ouvert)"),
         ],
     },
     "toolbar": {
-        "label": "Toolbar QGIS",
-        "desc": "Icones dans la barre d'outils QGIS",
+        "label": "Toolbar",
+        "desc": "Icones dans la barre d'outils",
         "targets": [
-            ("filtermate_toolbar_icon", "l'icone FilterMate dans la toolbar QGIS", "point"),
+            ("filtermate_toolbar_icon", "l'icone FilterMate dans la toolbar", "point"),
         ],
     },
     "plugin_manager": {
@@ -228,7 +228,7 @@ GROUPS: dict[str, dict] = {
     },
     "filtering_sync": {
         "label": "Bouton synchro couche source",
-        "desc": "Le pushbutton Auto Current Layer (synchro avec l'arbre des couches QGIS)",
+        "desc": "Le pushbutton Auto Current Layer (synchro avec l'arbre des couches)",
         "targets": [
             ("btn_auto_current_layer", "le pushbutton AUTO CURRENT LAYER (a gauche du combo couche source, onglet FILTERING)", "point"),
         ],
@@ -363,7 +363,7 @@ def cmd_show_all(config_path: Path) -> None:
     Press Enter to advance, 'q' to quit.
     """
     config = load_config(config_path)
-    regions = config.get("qgis", {}).get("regions", {})
+    regions = config.get("app", {}).get("regions", {})
     pag = _get_pyautogui()
 
     if not pag:
@@ -504,7 +504,7 @@ def _status_icon(val: dict | None) -> str:
 def cmd_list(config_path: Path) -> None:
     """Print current calibration data, grouped and with status."""
     config = load_config(config_path)
-    regions = config.get("qgis", {}).get("regions", {})
+    regions = config.get("app", {}).get("regions", {})
 
     print()
     print("=" * 72)
@@ -556,7 +556,7 @@ def cmd_list(config_path: Path) -> None:
 def cmd_live(config_path: Path) -> None:
     """Live mouse position monitor with nearest element display."""
     config = load_config(config_path)
-    regions = config.get("qgis", {}).get("regions", {})
+    regions = config.get("app", {}).get("regions", {})
     pag = _get_pyautogui()
 
     if not pag:
@@ -606,7 +606,7 @@ def cmd_live(config_path: Path) -> None:
 def cmd_validate(config_path: Path) -> None:
     """Validate coherence of calibrated positions."""
     config = load_config(config_path)
-    regions = config.get("qgis", {}).get("regions", {})
+    regions = config.get("app", {}).get("regions", {})
 
     print()
     print("=" * 60)
@@ -813,7 +813,7 @@ def cmd_validate(config_path: Path) -> None:
 def cmd_edit(config_path: Path, region_key: str) -> None:
     """Edit a single region's coordinates with mouse capture support."""
     config = load_config(config_path)
-    regions = config.setdefault("qgis", {}).setdefault("regions", {})
+    regions = config.setdefault("app", {}).setdefault("regions", {})
 
     val = regions.get(region_key)
     print(f"\n  Edition de : {region_key}")
@@ -851,7 +851,7 @@ def cmd_calibrate_group(config_path: Path, group_id: str) -> None:
 
     group = GROUPS[group_id]
     config = load_config(config_path)
-    regions = config.setdefault("qgis", {}).setdefault("regions", {})
+    regions = config.setdefault("app", {}).setdefault("regions", {})
 
     print(f"\n  Calibration du groupe : {group['label']}")
     print(f"  {group['desc']}")
@@ -871,7 +871,7 @@ def cmd_calibrate_group(config_path: Path, group_id: str) -> None:
 def cmd_calibrate_all(config_path: Path) -> None:
     """Full interactive calibration session."""
     config = load_config(config_path)
-    regions = config.setdefault("qgis", {}).setdefault("regions", {})
+    regions = config.setdefault("app", {}).setdefault("regions", {})
     undo_stack: list[dict] = []
 
     print()
@@ -880,7 +880,7 @@ def cmd_calibrate_all(config_path: Path) -> None:
     print("=" * 65)
     print()
     print("  Avant de commencer :")
-    print("  1. QGIS ouvert avec FilterMate charge et visible")
+    print("  1. Application ouverte avec le panneau visible")
     print("  2. Onglet FILTERING selectionne dans la Toolbox")
     print("  3. Ecran en position normale d'enregistrement")
     print()
@@ -1128,7 +1128,7 @@ def cmd_review(config_path: Path) -> None:
       q      = quit review (saves changes)
     """
     config = load_config(config_path)
-    regions = config.setdefault("qgis", {}).setdefault("regions", {})
+    regions = config.setdefault("app", {}).setdefault("regions", {})
 
     print()
     print("=" * 72)
@@ -1237,7 +1237,7 @@ def cmd_review(config_path: Path) -> None:
 def cmd_reset(config_path: Path) -> None:
     """Zero out all region coordinates."""
     config = load_config(config_path)
-    regions = config.get("qgis", {}).get("regions", {})
+    regions = config.get("app", {}).get("regions", {})
 
     print(f"\n  ATTENTION : Ceci va remettre TOUTES les {len(regions)} positions a zero !")
     confirm = input("  Confirmer ? (oui/non) > ").strip().lower()
@@ -1263,7 +1263,7 @@ def cmd_interactive_menu(config_path: Path) -> None:
 
     while True:
         config = load_config(config_path)
-        regions = config.get("qgis", {}).get("regions", {})
+        regions = config.get("app", {}).get("regions", {})
         total = len(regions)
         calibrated = sum(1 for v in regions.values() if _is_calibrated(v))
 

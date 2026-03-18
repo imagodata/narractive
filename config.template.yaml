@@ -9,38 +9,38 @@ obs:
   port: 4455
   password: ''
   scenes:
-    qgis_fullscreen: QGIS Fullscreen
-    qgis_with_plugin: QGIS + Plugin
+    main: Main
+    app_with_panel: App + Panel
     diagram_overlay: Diagram Overlay
     intro_scene: Intro
     outro_scene: Outro
   output_dir: ~/Videos/MyProject
   recording_format: mkv
 
-qgis:
-  window_title: QGIS
-  plugin_panel: ''           # Name of your plugin's dock panel (for focus)
+app:
+  window_title: ''             # Title (or substring) of your target application
+  panel_name: ''               # Name of a dock panel to focus (optional)
   startup_wait: 5
   regions:
-    # ── Plugin dock widget ────────────────────────────────────────
+    # ── Side panel / dock widget ──────────────────────────────────
     plugin_dock:
       x: 1941
       y: 247
       width: 610
       height: 1231
-    # ── Main canvas ───────────────────────────────────────────────
+    # ── Main canvas / viewport ────────────────────────────────────
     main_canvas:
       x: 434
       y: 236
       width: 1500
       height: 1246
-    # ── QGIS menus ───────────────────────────────────────────────
-    menu_extensions:
-      x: 386
-      y: 49
-    menu_extensions_manage:
-      x: 397
-      y: 80
+    # ── Application menus (example) ───────────────────────────────
+    # menu_extensions:
+    #   x: 386
+    #   y: 49
+    # menu_extensions_manage:
+    #   x: 397
+    #   y: 80
     # ── Add your calibrated regions below ─────────────────────────
     # my_button:
     #   x: 2000

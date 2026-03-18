@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Standalone video assembler — creates a FilterMate presentation video from
+Standalone video assembler — creates a presentation video from
 generated PNG diagrams + MP3 narrations using FFmpeg.
 
-No QGIS or OBS required. Just Python + FFmpeg.
+No OBS required. Just Python + FFmpeg.
 Output: A diagram-based video with narration for each sequence.
 """
 import json

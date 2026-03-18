@@ -24,12 +24,12 @@ class V01S04FirstFilter(TimelineSequence):
     name = "V01 — Premier filtrage Shapefile"
     sequence_id = "v01_s04"
     duration_estimate = 75.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["v01_first_filter_workflow"]
     narration_text = ""  # Narration is now in the cues
 
-    def build_timeline(self, obs, qgis, config):
-        regions = config["qgis"]["regions"]
+    def build_timeline(self, obs, app, config):
+        regions = config["app"]["regions"]
         move_dur = config["timing"].get("mouse_move_duration", 0.5)
         canvas = regions.get("main_canvas", {})
         if canvas:
@@ -52,55 +52,55 @@ class V01S04FirstFilter(TimelineSequence):
             """Use next/prev to land on a department — no typing."""
             self._log.info("Navigating with next/prev buttons")
             click_next_feature()
-            qgis.wait(1.5)
+            app.wait(1.5)
             click_next_feature()
-            qgis.wait(1.5)
+            app.wait(1.5)
 
         def setup_filter():
             self._log.info("Switching to FILTERING tab")
-            qgis.select_tab("FILTERING")
-            qgis.wait(0.5)
+            app.select_tab("FILTERING")
+            app.wait(0.5)
 
         def select_target():
             self._log.info("Selecting target layer 'communes'")
-            qgis.select_target_layer("communes")
+            app.select_target_layer("communes")
 
         def select_predicate():
             self._log.info("Selecting predicate 'Intersects'")
-            qgis.select_predicate("intersects")
+            app.select_predicate("intersects")
 
         def execute_filter():
             self._log.info("Clicking FILTER")
-            qgis.click_action_button("filter")
+            app.click_action_button("filter")
             time.sleep(3.0)  # Wait for query completion
 
         def show_result():
             self._log.info("Showing result on map")
-            qgis.move_mouse_to(cx - 200, cy, duration=1.5)
-            qgis.wait(1.0)
-            qgis.move_mouse_to(cx + 200, cy, duration=1.5)
+            app.move_mouse_to(cx - 200, cy, duration=1.5)
+            app.wait(1.0)
+            app.move_mouse_to(cx + 200, cy, duration=1.5)
 
         def execute_undo():
             """Demonstrate Undo — restore previous state."""
             self._log.info("Clicking UNDO to demonstrate history")
-            qgis.click_action_button("undo")
+            app.click_action_button("undo")
             time.sleep(2.0)
 
         def execute_redo():
             """Demonstrate Redo — re-apply filter."""
             self._log.info("Clicking REDO to re-apply filter")
-            qgis.click_action_button("redo")
+            app.click_action_button("redo")
             time.sleep(2.0)
 
         def execute_unfilter():
             self._log.info("Clicking UNFILTER to show reversibility")
-            qgis.click_action_button("unfilter")
+            app.click_action_button("unfilter")
             time.sleep(2.0)
 
         def show_backend_and_diagram():
-            qgis.hover_region("badge_backend", duration=2.0)
+            app.hover_region("badge_backend", duration=2.0)
             self.show_diagram(obs, "v01_first_filter_workflow", duration=6.0)
-            qgis.focus_qgis()
+            app.focus_app()
 
         return [
             # Cue 0: Introduce the demo
@@ -111,7 +111,7 @@ class V01S04FirstFilter(TimelineSequence):
                     "les départements et les communes."
                 ),
                 sync="during",
-                actions=lambda: qgis.focus_filtermate(),
+                actions=lambda: app.focus_panel(),
                 post_delay=0.5,
             ),
             # Cue 1: Navigate with next/prev to pick an entity

@@ -14,7 +14,7 @@ class Seq07Backends(VideoSequence):
     name = "Multi-Backend — Coulisses"
     sequence_id = "seq07"
     duration_estimate = 45.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["08_backends"]
     narration_text = (
         "Derrière l'interface simple, FilterMate embarque 4 backends optimisés. "
@@ -24,26 +24,26 @@ class Seq07Backends(VideoSequence):
         "Et pour tout le reste : le backend OGR universel."
     )
 
-    def execute(self, obs, qgis, config):
+    def execute(self, obs, app, config):
         """
         This sequence is mostly diagram-driven. We briefly show QGIS,
         then dive into diagram animations.
         """
-        qgis.focus_qgis()
-        qgis.wait(1.0)
+        app.focus_app()
+        app.wait(1.0)
 
         # 1. Show a quick filter on different layer types to illustrate auto-selection
-        qgis.focus_filtermate()
-        qgis.select_tab("FILTERING")
-        qgis.wait(0.5)
+        app.focus_panel()
+        app.select_tab("FILTERING")
+        app.wait(0.5)
 
         # Demonstrate selecting a PostgreSQL layer (if available)
-        qgis.select_layer("routes")  # PostgreSQL layer
-        qgis.wait(1.0)
+        app.select_layer("routes")  # PostgreSQL layer
+        app.wait(1.0)
 
         # 2. Display the backend selection diagram — main content of this sequence
         self.show_diagram(obs, "08_backends", duration=20.0)
 
         # 3. Return to QGIS
-        qgis.focus_qgis()
-        qgis.wait(1.0)
+        app.focus_app()
+        app.wait(1.0)

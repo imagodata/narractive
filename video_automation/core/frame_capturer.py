@@ -287,11 +287,14 @@ class FrameCapturer:
             self.switch_scene(self.scenes.get("diagram_overlay", "Diagram Overlay"))
         else:
             self.switch_scene(
-                self.scenes.get("qgis_with_filtermate", "QGIS + FilterMate")
+                self.scenes.get("main", "Main")
             )
 
-    def transition_to_qgis(self) -> None:
-        self.switch_scene(self.scenes.get("qgis_with_filtermate", "QGIS + FilterMate"))
+    def transition_to_main(self) -> None:
+        self.switch_scene(self.scenes.get("main", "Main"))
+
+    # Backward compatibility alias
+    transition_to_qgis = transition_to_main
 
     def transition_to_intro(self) -> None:
         self.switch_scene(self.scenes.get("intro_scene", "Intro"))

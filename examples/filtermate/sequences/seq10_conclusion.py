@@ -22,29 +22,29 @@ class Seq10Conclusion(VideoSequence):
         "laissez une étoile sur GitHub. À bientôt !"
     )
 
-    def setup(self, obs, qgis, config):
+    def setup(self, obs, app, config):
         obs.transition_to_outro()
-        qgis.wait(1.0)
+        app.wait(1.0)
 
-    def execute(self, obs, qgis, config):
+    def execute(self, obs, app, config):
         """
         Show the outro scene with links displayed.
         The outro scene in OBS contains a Browser Source or Image with:
           - FilterMate logo
           - GitHub: https://github.com/imagodata/filter_mate
-          - QGIS Plugins: https://plugins.qgis.org/plugins/filter_mate
+          - QGIS Plugins: https://plugins.app.org/plugins/filter_mate
           - Documentation: https://imagodata.github.io/filter_mate
         """
         # Display the outro for the narration duration
-        qgis.wait(18.0)
+        app.wait(18.0)
         self._log.info(
             "CTA links:\n"
             "  GitHub: https://github.com/imagodata/filter_mate\n"
-            "  QGIS:   https://plugins.qgis.org/plugins/filter_mate\n"
+            "  QGIS:   https://plugins.app.org/plugins/filter_mate\n"
             "  Docs:   https://imagodata.github.io/filter_mate"
         )
 
-    def teardown(self, obs, qgis, config):
+    def teardown(self, obs, app, config):
         # Fade to black / end
-        qgis.wait(2.0)
+        app.wait(2.0)
         self._log.info("Video production complete!")

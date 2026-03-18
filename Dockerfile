@@ -1,20 +1,24 @@
 # =============================================================================
-# Video Automation — Headless QGIS + Frame Capture
+# Video Automation — Headless Frame Capture
 # =============================================================================
-# Runs QGIS in a virtual framebuffer (Xvfb), captures frames via scrot/import,
-# and assembles final video with FFmpeg. No OBS required.
+# Runs an application in a virtual framebuffer (Xvfb), captures frames via
+# scrot/import, and assembles final video with FFmpeg. No OBS required.
 #
 # Build:
 #   docker build -t video-automation .
 #
 # Run:
 #   docker run --rm -v $(pwd)/output:/app/output video-automation --all --sequences-package my_plugin.sequences
+#
+# For application-specific images, extend this Dockerfile:
+#   FROM video-automation:latest
+#   RUN apt-get install -y my-application
 # =============================================================================
 
-FROM qgis/qgis:release-3_36
+FROM ubuntu:22.04
 
 LABEL maintainer="Video Automation"
-LABEL description="Headless QGIS + FFmpeg frame capture for video automation"
+LABEL description="Headless frame capture + FFmpeg for desktop application video automation"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -54,17 +58,15 @@ RUN pip3 install --no-cache-dir --break-system-packages playwright \
 # ── Xvfb configuration ──────────────────────────────────────────────────────
 ENV DISPLAY=:99
 ENV RESOLUTION=1920x1080x24
-ENV QGIS_PREFIX_PATH=/usr
 ENV QT_QPA_PLATFORM=xcb
 
 # ── Working directory ────────────────────────────────────────────────────────
 WORKDIR /app
 COPY . /app/
 
-# ── Plugin mount point ──────────────────────────────────────────────────────
-# Mount your QGIS plugin at runtime:
-#   -v /path/to/my_plugin:/root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/my_plugin
-VOLUME ["/root/.local/share/QGIS/QGIS3/profiles/default/python/plugins"]
+# ── Application mount point ──────────────────────────────────────────────────
+# Mount application data or plugins at runtime:
+#   -v /path/to/data:/data:ro
 VOLUME ["/app/output"]
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────

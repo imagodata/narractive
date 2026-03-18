@@ -24,7 +24,7 @@ with open(CONFIG, encoding="utf-8") as f:
     cfg = yaml.safe_load(f)
 
 for btn, pos in positions.items():
-    cfg["qgis"]["regions"][btn] = pos
+    cfg["app"]["regions"][btn] = pos
 
 with open(CONFIG, "w", encoding="utf-8") as f:
     yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)

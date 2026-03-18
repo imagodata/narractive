@@ -175,7 +175,7 @@ class Narrator:
 
         wav_output = output_path.with_suffix(".wav").resolve()
 
-        bridge_script = Path(__file__).parent.parent.parent / "f5_tts_bridge.py"
+        bridge_script = Path(__file__).parent.parent / "bridges" / "f5_tts_bridge.py"
         if not bridge_script.exists():
             raise FileNotFoundError(f"F5-TTS bridge script not found: {bridge_script}")
 

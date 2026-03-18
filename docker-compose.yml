@@ -23,12 +23,11 @@ services:
       - RESOLUTION=1920x1080x24
       - CAPTURE_FPS=10
       - PROJECT_NAME=MyProject
-      - QGIS_PROJECT=/data/project.qgz
+      # - APP_COMMAND=my-app --project /data/project.file
+      # - APP_WINDOW_TITLE=MyApp
 
     volumes:
       - ./output:/app/output
       - ./data:/data:ro
-      # Mount your QGIS plugin:
-      # - /path/to/my_plugin:/root/.local/share/QGIS/QGIS3/profiles/default/python/plugins/my_plugin:ro
 
     shm_size: '2gb'

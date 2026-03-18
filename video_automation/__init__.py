@@ -1,10 +1,11 @@
 """
-Video Automation — QGIS Plugin Video Production Framework
-==========================================================
-A modular, reusable framework for automating QGIS plugin demo videos.
+Video Automation — Desktop Application Video Production Framework
+================================================================
+A modular, reusable framework for automating demo videos of any
+desktop application.
 
 Core modules:
-  - qgis_automator: PyAutoGUI-based QGIS control
+  - app_automator: PyAutoGUI-based UI control
   - obs_controller: OBS WebSocket 5.x recording
   - frame_capturer: Headless Xvfb frame capture (Docker)
   - narrator: Multi-engine TTS (edge-tts, ElevenLabs, F5-TTS)
@@ -13,4 +14,12 @@ Core modules:
   - video_assembler: FFmpeg post-production pipeline
 """
 
-__version__ = "1.0.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("narractive")
+except PackageNotFoundError:
+    try:
+        __version__ = version("video-automation")
+    except PackageNotFoundError:
+        __version__ = "2.0.0"

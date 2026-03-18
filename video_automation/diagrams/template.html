@@ -156,9 +156,9 @@
 
     <!-- Header -->
     <header class="header">
-      <div class="logo">F</div>
+      <div class="logo">&#9670;</div>
       <h1 class="header-title">{{TITLE}}</h1>
-      <span class="header-badge">FilterMate v4.6.1</span>
+      <span class="header-badge">{{SUBTITLE}}</span>
     </header>
 
     <!-- Diagram -->
@@ -170,11 +170,9 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <span>FilterMate — QGIS Plugin | Architecture Hexagonale</span>
+      <span>{{TITLE}}</span>
       <div class="footer-links">
-        <a href="#">github.com/imagodata/filter_mate</a>
-        <a href="#">plugins.qgis.org/plugins/filter_mate</a>
-        <a href="#">imagodata.github.io/filter_mate</a>
+        <a href="#">{{FOOTER_URL}}</a>
       </div>
     </footer>
 
@@ -185,7 +183,7 @@
       startOnLoad: true,
       theme: '{{THEME}}',
       themeVariables: {
-        // Core palette — FilterMate brand
+        // Core palette
         primaryColor:        '#1976D2',
         primaryTextColor:    '#ffffff',
         primaryBorderColor:  '#4CAF50',

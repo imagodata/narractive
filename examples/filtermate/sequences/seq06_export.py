@@ -14,7 +14,7 @@ class Seq06Export(VideoSequence):
     name = "Export GeoPackage"
     sequence_id = "seq06"
     duration_estimate = 60.0
-    obs_scene = "QGIS + FilterMate"
+    obs_scene = "App + Panel"
     diagram_ids = ["07_export"]
     narration_text = (
         "L'export GeoPackage est l'une des fonctionnalités les plus puissantes. "
@@ -25,43 +25,43 @@ class Seq06Export(VideoSequence):
         "Idéal pour partager un livrable complet en un seul fichier."
     )
 
-    def execute(self, obs, qgis, config):
+    def execute(self, obs, app, config):
         import pyautogui  # type: ignore
 
-        qgis.focus_qgis()
-        qgis.focus_filtermate()
+        app.focus_app()
+        app.focus_panel()
 
         # 1. Switch to EXPORTING tab
-        qgis.select_tab("EXPORTING")
-        qgis.wait(1.5)
+        app.select_tab("EXPORTING")
+        app.wait(1.5)
 
         # 2. Highlight the export options panel
         #    Move mouse to show available options (layers, CRS, output path, etc.)
-        regions = config.get("qgis", {}).get("regions", {})
+        regions = config.get("app", {}).get("regions", {})
         dock = regions.get("filtermate_dock", {})
         if dock:
-            qgis.highlight_area("filtermate_dock", duration=2.0)
+            app.highlight_area("filtermate_dock", duration=2.0)
 
         # 3. Simulate selecting all layers for export (check "All layers" checkbox if visible)
-        qgis.click_button("btn_select_all_layers", confidence=0.75)
-        qgis.wait(0.5)
+        app.click_button("btn_select_all_layers", confidence=0.75)
+        app.wait(0.5)
 
         # 4. Scroll down to show export options (output path, CRS, etc.)
-        qgis.scroll_down(clicks=2)
-        qgis.wait(0.8)
-        qgis.scroll_up(clicks=2)
-        qgis.wait(0.5)
+        app.scroll_down(clicks=2)
+        app.wait(0.8)
+        app.scroll_up(clicks=2)
+        app.wait(0.5)
 
         # 5. Click Export button (but don't actually confirm to keep demo clean)
         #    For the demo we just move to the button
-        qgis.click_button("btn_export_gpkg", confidence=0.75)
-        qgis.wait(1.0)
+        app.click_button("btn_export_gpkg", confidence=0.75)
+        app.wait(1.0)
         pyautogui.press("escape")  # Cancel the file dialog
-        qgis.wait(0.5)
+        app.wait(0.5)
 
         # 6. Show the export diagram
         self.show_diagram(obs, "07_export", duration=10.0)
 
         # 7. Return to FILTERING tab for clean handoff
-        qgis.select_tab("FILTERING")
-        qgis.wait(1.0)
+        app.select_tab("FILTERING")
+        app.wait(1.0)

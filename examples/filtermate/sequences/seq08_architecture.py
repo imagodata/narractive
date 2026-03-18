@@ -25,30 +25,30 @@ class Seq08Architecture(VideoSequence):
         "et extensible pour de futurs backends."
     )
 
-    def setup(self, obs, qgis, config):
+    def setup(self, obs, app, config):
         # For this sequence, start on the diagram overlay directly
         obs.switch_scene(obs.scenes.get("diagram_overlay", "Diagram Overlay"))
-        qgis.wait(1.0)
+        app.wait(1.0)
 
-    def execute(self, obs, qgis, config):
+    def execute(self, obs, app, config):
         """Show both architecture diagrams back-to-back."""
         # 1. Hexagonal architecture diagram
         self._log.info("Showing hexagonal architecture diagram")
         # (OBS browser source is already pointing to 09_architecture.html)
-        qgis.wait(20.0)  # Stay on diagram while narration plays
+        app.wait(20.0)  # Stay on diagram while narration plays
 
         # 2. Design patterns mindmap
         self._log.info("Showing design patterns diagram")
         # Switch OBS browser source to patterns diagram
         # (This is handled by set_source_visibility in a real setup)
         obs.switch_scene(obs.scenes.get("diagram_overlay", "Diagram Overlay"))
-        qgis.wait(15.0)
+        app.wait(15.0)
 
         # 3. Return to QGIS
-        obs.transition_to_qgis()
-        qgis.focus_qgis()
-        qgis.wait(1.0)
+        obs.transition_to_main()
+        app.focus_app()
+        app.wait(1.0)
 
-    def teardown(self, obs, qgis, config):
-        obs.transition_to_qgis()
-        super().teardown(obs, qgis, config)
+    def teardown(self, obs, app, config):
+        obs.transition_to_main()
+        super().teardown(obs, app, config)

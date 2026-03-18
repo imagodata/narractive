@@ -6,7 +6,7 @@ source visibility, and screenshot capture.
 
 Usage:
     with OBSController(config) as obs:
-        obs.switch_scene("QGIS Fullscreen")
+        obs.switch_scene("Main")
         obs.start_recording()
         ...
         obs.stop_recording()
@@ -309,11 +309,14 @@ class OBSController:
         if visible:
             self.switch_scene(diagram_scene)
         else:
-            self.switch_scene(self.scenes.get("qgis_with_filtermate", "QGIS + FilterMate"))
+            self.switch_scene(self.scenes.get("main", "Main"))
 
-    def transition_to_qgis(self) -> None:
-        """Switch to the main QGIS + FilterMate scene."""
-        self.switch_scene(self.scenes.get("qgis_with_filtermate", "QGIS + FilterMate"))
+    def transition_to_main(self) -> None:
+        """Switch to the main application scene."""
+        self.switch_scene(self.scenes.get("main", "Main"))
+
+    # Backward compatibility alias
+    transition_to_qgis = transition_to_main
 
     def transition_to_intro(self) -> None:
         """Switch to the intro scene."""

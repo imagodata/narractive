@@ -3,7 +3,7 @@
 Video Automation — Main Orchestrator
 =====================================
 Controls the full video production pipeline: diagrams, narration,
-QGIS automation via PyAutoGUI, recording (OBS or headless frame capture),
+UI automation via PyAutoGUI, recording (OBS or headless frame capture),
 and FFmpeg assembly.
 
 Usage (Desktop/OBS mode):
@@ -145,7 +145,7 @@ def load_sequences_from_package(package_path: str) -> list:
 def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_module,
         narration, narrations_file, video, calibrate, setup_obs, assemble,
         capture, capture_fps, dry_run, list_seqs, project_name, verbose):
-    """Video Automation — orchestrates QGIS + OBS/FrameCapture + FFmpeg."""
+    """Video Automation — orchestrates App + OBS/FrameCapture + FFmpeg."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -337,12 +337,12 @@ def cmd_run_sequence(
         return
 
     click.echo(f"\nRunning sequence {seq_num}: {seq.name}\n")
-    recorder, qgis = _init_controllers(config, use_capture=use_capture)
+    recorder, app = _init_controllers(config, use_capture=use_capture)
     with recorder:
         recorder.start_recording()
         recorder.wait_for_recording_start()
         try:
-            seq.run(recorder, qgis, config)
+            seq.run(recorder, app, config)
         finally:
             output_path = recorder.stop_recording()
             click.echo(f"\n  Recording saved: {output_path}")
@@ -378,7 +378,7 @@ def cmd_run_all(
 
     _check_prerequisites(config, use_capture=use_capture)
 
-    recorder, qgis = _init_controllers(config, use_capture=use_capture)
+    recorder, app = _init_controllers(config, use_capture=use_capture)
 
     recording_files: list[str] = []
     all_timeline_results: list[tuple[str, object]] = []
@@ -394,7 +394,7 @@ def cmd_run_all(
             recorder.start_recording()
             recorder.wait_for_recording_start()
             try:
-                seq.run(recorder, qgis, config)
+                seq.run(recorder, app, config)
             except KeyboardInterrupt:
                 click.echo("\n  Interrupted by user.")
                 output_path = recorder.stop_recording()
@@ -484,7 +484,7 @@ def cmd_assemble(
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 def _init_controllers(config: dict, use_capture: bool = False):
-    from video_automation.core.qgis_automator import QGISAutomator
+    from video_automation.core.app_automator import AppAutomator
 
     if use_capture:
         from video_automation.core.frame_capturer import FrameCapturer
@@ -493,8 +493,8 @@ def _init_controllers(config: dict, use_capture: bool = False):
         from video_automation.core.obs_controller import OBSController
         recorder = OBSController(config.get("obs", {}))
 
-    qgis = QGISAutomator(config)
-    return recorder, qgis
+    app = AppAutomator(config)
+    return recorder, app
 
 
 def _check_prerequisites(config: dict, use_capture: bool = False) -> None:
