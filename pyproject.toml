@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "video-automation"
+version = "1.0.0"
+description = "Modular framework for automating QGIS plugin demo video production"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Simon Ducorneau"},
+]
+keywords = ["qgis", "video", "automation", "pyautogui", "obs", "tts", "ffmpeg"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "pyautogui>=0.9.54",
+    "Pillow>=10.0",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "edge-tts>=6.1.0",
+    "mutagen>=1.47.0",
+]
+
+[project.optional-dependencies]
+obs = ["obsws-python>=1.7.0"]
+windows = ["pywin32>=306"]
+png = ["playwright>=1.40"]
+elevenlabs = ["elevenlabs"]
+all = [
+    "obsws-python>=1.7.0",
+    "pywin32>=306",
+    "playwright>=1.40",
+]
+headless = [
+    "python-xlib>=0.33",
+]
+
+[project.scripts]
+video-automation = "video_automation.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/SimonDucworkneau/video-automation"
+Repository = "https://github.com/SimonDucorneau/video-automation"
+
+[tool.setuptools.packages.find]
+include = ["video_automation*"]

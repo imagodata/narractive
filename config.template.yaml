@@ -1,0 +1,99 @@
+# =============================================================================
+# Video Automation — Configuration Template
+# =============================================================================
+# Copy this file to config.yaml and adjust values for your project.
+# Run `video-automation --calibrate` to set UI positions interactively.
+
+obs:
+  host: localhost
+  port: 4455
+  password: ''
+  scenes:
+    qgis_fullscreen: QGIS Fullscreen
+    qgis_with_plugin: QGIS + Plugin
+    diagram_overlay: Diagram Overlay
+    intro_scene: Intro
+    outro_scene: Outro
+  output_dir: ~/Videos/MyProject
+  recording_format: mkv
+
+qgis:
+  window_title: QGIS
+  plugin_panel: ''           # Name of your plugin's dock panel (for focus)
+  startup_wait: 5
+  regions:
+    # ── Plugin dock widget ────────────────────────────────────────
+    plugin_dock:
+      x: 1941
+      y: 247
+      width: 610
+      height: 1231
+    # ── Main canvas ───────────────────────────────────────────────
+    main_canvas:
+      x: 434
+      y: 236
+      width: 1500
+      height: 1246
+    # ── QGIS menus ───────────────────────────────────────────────
+    menu_extensions:
+      x: 386
+      y: 49
+    menu_extensions_manage:
+      x: 397
+      y: 80
+    # ── Add your calibrated regions below ─────────────────────────
+    # my_button:
+    #   x: 2000
+    #   y: 500
+
+timing:
+  click_delay: 0.3
+  type_delay: 0.05
+  scroll_delay: 0.2
+  action_pause: 1.0
+  transition_pause: 2.0
+  mouse_move_duration: 0.5
+
+diagrams:
+  output_dir: output/diagrams
+  width: 2560
+  height: 1440
+  theme: dark
+  background_color: '#1a1a2e'
+  font_family: Segoe UI
+
+narration:
+  engine: edge-tts             # edge-tts | elevenlabs | f5-tts
+  voice: fr-FR-HenriNeural     # Microsoft Neural TTS voice
+  output_dir: output/narration
+  speed: +0%
+  # F5-TTS options (optional):
+  # f5_ref_audio: output/narration/ref_voice.wav
+  # f5_ref_text: "Reference transcription text..."
+  # f5_model: F5TTS_v1_Base
+  # f5_speed: 1.0
+  # f5_conda_env: f5-tts
+  # f5_remove_silence: false
+
+capture:
+  fps: 10
+  output_dir: output/captures
+  resolution: 2560x1440
+  display: ':99'
+  method: import               # import | scrot | xdotool | ffmpeg
+  codec: libx264
+  quality: 23
+  format: mp4
+  scenes:
+    qgis_fullscreen: QGIS Fullscreen
+    qgis_with_plugin: QGIS + Plugin
+    diagram_overlay: Diagram Overlay
+    intro_scene: Intro
+    outro_scene: Outro
+
+output:
+  final_dir: output/final
+  resolution: 2560x1440
+  fps: 30
+  codec: libx264
+  quality: '23'
