@@ -4,15 +4,15 @@ build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "video-automation"
-version = "1.0.0"
-description = "Modular framework for automating QGIS plugin demo video production"
+version = "2.0.0"
+description = "Modular framework for automating desktop application demo video production"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
     {name = "Simon Ducorneau"},
 ]
-keywords = ["qgis", "video", "automation", "pyautogui", "obs", "tts", "ffmpeg"]
+keywords = ["video", "automation", "pyautogui", "obs", "tts", "ffmpeg", "demo", "screencast"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,7 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
-    "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
     "pyautogui>=0.9.54",
@@ -47,13 +46,45 @@ all = [
 headless = [
     "python-xlib>=0.33",
 ]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+]
 
 [project.scripts]
 video-automation = "video_automation.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/SimonDucworkneau/video-automation"
-Repository = "https://github.com/SimonDucorneau/video-automation"
+Homepage = "https://github.com/imagodata/narractive"
+Repository = "https://github.com/imagodata/narractive"
 
 [tool.setuptools.packages.find]
 include = ["video_automation*"]
+
+# ── Ruff ──────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["video_automation"]
+
+# ── Mypy ──────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

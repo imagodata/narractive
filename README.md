@@ -1,8 +1,8 @@
-# Video Automation
+# Narractive
 
-A modular Python framework for automating QGIS plugin demo video production.
+A modular Python framework for automated video production — from narration to final cut.
 
-Automate the entire pipeline: UI interaction (PyAutoGUI), recording (OBS or headless), narration (TTS), Mermaid diagrams, and FFmpeg assembly.
+Narractive orchestrates the full pipeline: UI interaction (PyAutoGUI), screen recording (OBS or headless), text-to-speech narration, Mermaid diagram generation, and FFmpeg assembly. Script your sequences, define narration cues, and let the framework produce polished demo videos hands-free.
 
 ## Features
 
@@ -42,10 +42,10 @@ docker compose run --rm video --all --sequences-package my_project.sequences
 ## Architecture
 
 ```
-video-automation/
+narractive/
 ├── video_automation/              # Framework (pip-installable)
 │   ├── core/                      # Generic modules
-│   │   ├── qgis_automator.py     # PyAutoGUI + QGIS control
+│   │   ├── app_automator.py      # PyAutoGUI + window control
 │   │   ├── obs_controller.py     # OBS WebSocket 5.x
 │   │   ├── frame_capturer.py     # Headless Xvfb capture
 │   │   ├── narrator.py           # TTS (edge-tts/ElevenLabs/F5-TTS)
@@ -60,11 +60,11 @@ video-automation/
 │   └── cli.py                    # Click-based CLI
 │
 ├── examples/
-│   └── filtermate/               # FilterMate plugin example
+│   └── filtermate/               # Example project (QGIS plugin demo)
 │       ├── sequences/            # 11 original + 7 v01 sequences
 │       ├── diagrams/             # 20 Mermaid diagram definitions
 │       ├── narrations.yaml       # French narration scripts
-│       └── config.yaml           # Calibrated FilterMate positions
+│       └── config.yaml           # Calibrated UI positions
 │
 ├── config.template.yaml          # Configuration template
 ├── Dockerfile                    # Headless Docker image
@@ -72,7 +72,7 @@ video-automation/
 └── pyproject.toml
 ```
 
-## Creating Sequences for Your Plugin
+## Creating Sequences for Your App
 
 ### 1. Simple sequence (manual timing)
 
@@ -83,13 +83,13 @@ class MyIntro(VideoSequence):
     name = "Introduction"
     sequence_id = "seq00"
     duration_estimate = 30.0
-    obs_scene = "QGIS Fullscreen"
+    obs_scene = "Main"
 
-    def execute(self, obs, qgis, config):
-        qgis.focus_qgis()
-        qgis.click_at("my_button")
-        qgis.wait(2.0)
-        qgis.scroll_down(3)
+    def execute(self, obs, app, config):
+        app.focus_app()
+        app.click_at("my_button")
+        app.wait(2.0)
+        app.scroll_down(3)
 ```
 
 ### 2. Timeline sequence (narration-synchronized)
@@ -103,16 +103,16 @@ class MyDemo(TimelineSequence):
     sequence_id = "seq01"
     duration_estimate = 60.0
 
-    def build_timeline(self, obs, qgis, config):
+    def build_timeline(self, obs, app, config):
         return [
             NarrationCue(
-                text="Welcome to my plugin.",
-                actions=lambda: qgis.wait(1.0),
+                text="Welcome to the demo.",
+                actions=lambda: app.wait(1.0),
                 sync="during",
             ),
             NarrationCue(
                 text="Let's open the settings.",
-                actions=lambda: qgis.click_at("settings_button"),
+                actions=lambda: app.click_at("settings_button"),
                 sync="after",
             ),
         ]
@@ -144,7 +144,7 @@ See `config.template.yaml` for all available options. Key sections:
 | Section | Purpose |
 |---------|---------|
 | `obs` | OBS WebSocket connection, scenes, output directory |
-| `qgis` | Window title, plugin panel name, calibrated UI positions |
+| `app` | Window title, panel name, calibrated UI positions |
 | `timing` | Click/type/scroll delays, transition pauses |
 | `diagrams` | Mermaid rendering (resolution, theme, colors) |
 | `narration` | TTS engine, voice, speed, F5-TTS options |
@@ -162,9 +162,9 @@ See `config.template.yaml` for all available options. Key sections:
 ## Requirements
 
 - Python 3.10+
-- QGIS 3.22+ (with your plugin installed)
 - FFmpeg (for video assembly)
 - OBS Studio (desktop mode) or Docker (headless mode)
+- Your target application installed and running
 
 ## License
 
