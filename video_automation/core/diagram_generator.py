@@ -1,20 +1,41 @@
 """
 Diagram Generator
 =================
-Converts Mermaid diagram definitions into styled HTML pages and optionally
-renders them to PNG via Playwright (headless Chromium).
+Converts Mermaid diagram definitions into styled HTML pages and renders
+them to PNG.  Multiple rendering backends are supported:
 
-Usage:
+- **Playwright** (headless Chromium) — highest quality, requires install.
+- **mmdc** (mermaid-cli) — local CLI, requires Node.js + Chrome libs.
+- **mermaid.ink API** — zero-dependency HTTP fallback, public API.
+
+Usage::
+
     from video_automation.core.diagram_generator import DiagramGenerator
     gen = DiagramGenerator(config["diagrams"])
-    html_path = gen.generate_diagram(mermaid_code, "output/diagrams/01.html", title="Positionnement")
-    png_path  = gen.render_to_png(html_path, "output/diagrams/01.png")
+
+    # HTML + Playwright (original)
+    html_path = gen.generate_diagram(mermaid_code, "out/01.html", title="Arch")
+    png_path  = gen.render_to_png(html_path, "out/01.png")
+
+    # Direct PNG via mermaid.ink API (zero-dep)
+    png_path  = gen.render_to_png_via_api(mermaid_code, "out/01.png")
+
+    # Auto-detect best backend
+    png_path  = gen.render_to_png_auto(mermaid_code, "out/01.png")
 """
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
+import os
 import shutil
+import subprocess
+import tempfile
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Optional
 
@@ -198,6 +219,254 @@ class DiagramGenerator:
             except Exception as exc:  # noqa: BLE001
                 logger.error("Failed to render '%s': %s", diagram_id, exc)
         return results
+
+    # ------------------------------------------------------------------
+    # PNG rendering via mermaid.ink API (zero-dependency)
+    # ------------------------------------------------------------------
+
+    def render_to_png_via_api(
+        self,
+        mermaid_code: str,
+        output_path: str | Path,
+        retries: int = 2,
+        rate_limit: float = 0.3,
+    ) -> Path:
+        """
+        Render Mermaid code to PNG via the mermaid.ink public API.
+
+        This requires no local dependencies — it sends the diagram as a
+        base64url-encoded URL and downloads the resulting PNG.
+
+        Parameters
+        ----------
+        mermaid_code : str
+            Raw Mermaid diagram definition.
+        output_path : str | Path
+            Where to save the PNG.
+        retries : int
+            Number of retry attempts on failure.
+        rate_limit : float
+            Seconds to wait between API calls (to avoid throttling).
+
+        Returns
+        -------
+        Path
+            Path to the rendered PNG file.
+        """
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        encoded = base64.urlsafe_b64encode(
+            mermaid_code.strip().encode("utf-8")
+        ).decode("ascii")
+        bg_hex = self.bg_color.lstrip("#")
+        url = (
+            f"https://mermaid.ink/img/{encoded}"
+            f"?type=png&theme={self.theme}&bgColor=!{bg_hex}"
+        )
+
+        for attempt in range(retries + 1):
+            try:
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "Narractive/2.0"}
+                )
+                resp = urllib.request.urlopen(req, timeout=30)
+                data = resp.read()
+
+                if len(data) < 100 or data[:4] != b"\x89PNG":
+                    logger.warning(
+                        "mermaid.ink: response not a valid PNG (%d bytes)", len(data),
+                    )
+                    if attempt < retries:
+                        time.sleep(1)
+                        continue
+                    raise RuntimeError("mermaid.ink returned invalid PNG data")
+
+                output_path.write_bytes(data)
+                logger.info(
+                    "mermaid.ink rendered: %s (%s bytes)",
+                    output_path.name, f"{len(data):,}",
+                )
+                if rate_limit > 0:
+                    time.sleep(rate_limit)
+                return output_path
+
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+                if attempt < retries:
+                    logger.debug("mermaid.ink attempt %d failed: %s", attempt + 1, exc)
+                    time.sleep(1)
+                    continue
+                raise RuntimeError(f"mermaid.ink API error after {retries + 1} attempts: {exc}")
+
+        raise RuntimeError("mermaid.ink: exhausted retries")
+
+    # ------------------------------------------------------------------
+    # PNG rendering via mmdc (mermaid-cli)
+    # ------------------------------------------------------------------
+
+    def render_to_png_via_mmdc(
+        self,
+        mmd_path: str | Path,
+        output_path: str | Path,
+    ) -> Path:
+        """
+        Render an ``.mmd`` file to PNG using the local ``mmdc`` CLI.
+
+        Parameters
+        ----------
+        mmd_path : str | Path
+            Path to the Mermaid source file.
+        output_path : str | Path
+            Where to save the PNG.
+
+        Returns
+        -------
+        Path
+            Path to the rendered PNG file.
+        """
+        mmd_path = Path(mmd_path)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write a temporary config for dark theme
+        config_data = {
+            "theme": self.theme,
+            "themeVariables": {
+                "darkMode": True,
+                "background": self.bg_color,
+                "primaryColor": "#3498db",
+                "primaryTextColor": "#ecf0f1",
+                "primaryBorderColor": "#2980b9",
+                "lineColor": "#bdc3c7",
+                "secondaryColor": "#2ecc71",
+                "tertiaryColor": "#9b59b6",
+                "fontFamily": f"{self.font_family}, sans-serif",
+                "fontSize": "16px",
+            },
+        }
+        config_fd, config_path = tempfile.mkstemp(suffix=".json", prefix="mermaid_cfg_")
+        try:
+            with os.fdopen(config_fd, "w") as f:
+                json.dump(config_data, f)
+
+            cmd = [
+                "mmdc",
+                "-i", str(mmd_path),
+                "-o", str(output_path),
+                "-w", str(self.width),
+                "-H", str(self.height),
+                "-b", self.bg_color,
+                "-c", config_path,
+                "--scale", "2",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                raise RuntimeError(f"mmdc failed: {result.stderr.strip()[:300]}")
+
+            logger.info("mmdc rendered: %s", output_path.name)
+            return output_path
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+
+    # ------------------------------------------------------------------
+    # Auto-detect backend
+    # ------------------------------------------------------------------
+
+    def detect_backend(self) -> str:
+        """
+        Auto-detect the best available rendering backend.
+
+        Returns
+        -------
+        str
+            One of ``"playwright"``, ``"mmdc"``, or ``"api"``.
+        """
+        # Check Playwright
+        try:
+            from playwright.sync_api import sync_playwright  # type: ignore  # noqa: F401
+            return "playwright"
+        except ImportError:
+            pass
+
+        # Check mmdc
+        try:
+            result = subprocess.run(
+                ["mmdc", "--version"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0:
+                return "mmdc"
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+        # Fallback to API
+        return "api"
+
+    def render_to_png_auto(
+        self,
+        mermaid_code: str,
+        output_path: str | Path,
+        backend: Optional[str] = None,
+    ) -> Path:
+        """
+        Render Mermaid code to PNG using the best available backend.
+
+        Parameters
+        ----------
+        mermaid_code : str
+            Raw Mermaid diagram definition.
+        output_path : str | Path
+            Where to save the PNG.
+        backend : str, optional
+            Force a specific backend (``"playwright"``, ``"mmdc"``, ``"api"``).
+            If None, auto-detects.
+
+        Returns
+        -------
+        Path
+            Path to the rendered PNG file.
+        """
+        output_path = Path(output_path)
+        selected = backend or self.detect_backend()
+        logger.debug("Using rendering backend: %s", selected)
+
+        if selected == "playwright":
+            # Generate HTML first, then render via Playwright
+            html_path = output_path.with_suffix(".html")
+            self.generate_diagram(mermaid_code, html_path)
+            return self.render_to_png(html_path, output_path)
+        elif selected == "mmdc":
+            mmd_path = output_path.with_suffix(".mmd")
+            self.write_mmd(mermaid_code, mmd_path)
+            return self.render_to_png_via_mmdc(mmd_path, output_path)
+        else:  # "api"
+            return self.render_to_png_via_api(mermaid_code, output_path)
+
+    # ------------------------------------------------------------------
+    # Mermaid source file writer
+    # ------------------------------------------------------------------
+
+    def write_mmd(self, mermaid_code: str, output_path: str | Path) -> Path:
+        """
+        Write Mermaid source code to an ``.mmd`` file.
+
+        Parameters
+        ----------
+        mermaid_code : str
+            Raw Mermaid diagram definition.
+        output_path : str | Path
+            Where to save the ``.mmd`` file.
+
+        Returns
+        -------
+        Path
+            Path to the written file.
+        """
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(mermaid_code.strip() + "\n", encoding="utf-8")
+        logger.debug("Wrote .mmd source: %s", output_path)
+        return output_path
 
     # ------------------------------------------------------------------
     # HTML builder

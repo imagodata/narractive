@@ -133,6 +133,13 @@ def load_sequences_from_package(package_path: str) -> list:
               help="Video script key in narrations.yaml (e.g. 'v01')")
 @click.option("--calibrate", is_flag=True, help="Run interactive UI calibration")
 @click.option("--setup-obs", "setup_obs", is_flag=True, help="Auto-configure OBS scenes/sources")
+@click.option("--subtitles", is_flag=True, help="Generate SRT subtitle files from narrations")
+@click.option("--lang", type=str, default=None, metavar="LANG",
+              help="Language code (e.g. 'fr', 'en', 'pt') for multilingual operations")
+@click.option("--narrations-dir", type=click.Path(exists=True), default=None,
+              help="Directory with per-language narration YAML files (fr.yaml, en.yaml, ...)")
+@click.option("--quality", type=click.Choice(["draft", "final"]), default="draft",
+              help="Encoding quality preset (default: draft)")
 @click.option("--assemble", is_flag=True, help="Assemble final video from recorded clips")
 @click.option("--capture", is_flag=True, help="Use headless frame capture instead of OBS")
 @click.option("--capture-fps", "capture_fps", type=int, default=None, metavar="N",
@@ -143,9 +150,10 @@ def load_sequences_from_package(package_path: str) -> list:
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose (DEBUG) logging")
 @click.pass_context
 def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_module,
-        narration, narrations_file, video, calibrate, setup_obs, assemble,
-        capture, capture_fps, dry_run, list_seqs, project_name, verbose):
-    """Video Automation — orchestrates App + OBS/FrameCapture + FFmpeg."""
+        narration, narrations_file, video, calibrate, setup_obs, subtitles, lang,
+        narrations_dir, quality, assemble, capture, capture_fps, dry_run, list_seqs,
+        project_name, verbose):
+    """Narractive — orchestrates App + OBS/FrameCapture + TTS + FFmpeg."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -171,6 +179,9 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
     ctx.obj["narrations_file"] = narrations_file
     ctx.obj["diagrams_module"] = diagrams_module
     ctx.obj["config_path"] = Path(config)
+    ctx.obj["lang"] = lang
+    ctx.obj["narrations_dir"] = narrations_dir
+    ctx.obj["quality"] = quality
 
     # Dispatch
     if list_seqs:
@@ -191,6 +202,10 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
 
     if narration:
         cmd_narration(cfg, dry_run, video=video, narrations_file=narrations_file)
+        return
+
+    if subtitles:
+        cmd_subtitles(cfg, dry_run, lang=lang, narrations_dir=narrations_dir)
         return
 
     if assemble:
@@ -284,6 +299,64 @@ def cmd_diagrams(config: dict, dry_run: bool, diagrams_module: str | None = None
         click.echo("  !! No PNG files (install Playwright)")
 
     click.echo(f"\nDone! {len(html_paths)} HTML, {len(png_paths)} PNG diagrams.\n")
+
+
+def cmd_subtitles(
+    config: dict, dry_run: bool,
+    lang: str | None = None, narrations_dir: str | None = None,
+) -> None:
+    """Generate SRT subtitle files from narration texts."""
+    from video_automation.core.narrator import load_narrations_multilingual
+    from video_automation.core.subtitles import SubtitleGenerator
+
+    sub_cfg = config.get("subtitles", {})
+    if not sub_cfg.get("enabled", True):
+        click.echo("Subtitles disabled in config.yaml (subtitles.enabled: false)")
+        return
+
+    gen = SubtitleGenerator(sub_cfg)
+    languages_cfg = config.get("languages", {})
+
+    # Determine narrations directory
+    narr_dir = Path(narrations_dir) if narrations_dir else Path("narrations")
+    if not narr_dir.exists():
+        click.echo(f"Narrations directory not found: {narr_dir}")
+        return
+
+    # Determine languages
+    if lang:
+        langs = [lang]
+    elif languages_cfg:
+        langs = list(languages_cfg.keys())
+    else:
+        # Auto-detect from YAML files in narrations dir
+        langs = [f.stem for f in sorted(narr_dir.glob("*.yaml"))]
+
+    if not langs:
+        click.echo("No languages found. Use --lang or configure languages in config.yaml.")
+        return
+
+    total = 0
+    for l_code in langs:
+        narrations = load_narrations_multilingual(narr_dir, l_code)
+        if not narrations:
+            click.echo(f"  [{l_code.upper()}] No narrations found, skipping.")
+            continue
+
+        out_template = sub_cfg.get("output_dir", "output/{lang}/subtitles")
+        out_dir = Path(out_template.replace("{lang}", l_code))
+
+        if dry_run:
+            click.echo(f"  [{l_code.upper()}] Would generate {len(narrations)} SRT files in {out_dir}")
+            continue
+
+        click.echo(f"\n  [{l_code.upper()}] Generating {len(narrations)} SRT files…")
+        results = gen.generate_for_language(narrations, out_dir, lang=l_code)
+        total += len(results)
+        for seq_id, path in results.items():
+            click.echo(f"    {seq_id}.srt")
+
+    click.echo(f"\nDone! {total} SRT files generated.\n")
 
 
 def cmd_narration(config: dict, dry_run: bool, video: str | None = None,

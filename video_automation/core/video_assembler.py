@@ -2,7 +2,10 @@
 Video Assembler
 ===============
 Post-production pipeline: combines OBS recordings, diagram overlays,
-and narration audio into the final video using FFmpeg.
+narration audio, and subtitles into the final video using FFmpeg.
+
+Supports quality presets (draft/final), subtitle burning (ASS/libass),
+intro/outro generation from images, and duration matching.
 
 Requires FFmpeg on PATH.
 
@@ -10,11 +13,13 @@ Usage:
     from video_automation.core.video_assembler import VideoAssembler
     va = VideoAssembler(config["output"])
     va.remux_mkv_to_mp4("raw_recording.mkv")
-    va.create_final_video(clips, narrations, diagrams, "output/final/filtermate.mp4")
+    va.assemble_sequence("seq01", "fr", base_dir, config)
+    va.create_final_video(clips, narrations, diagrams, "output/final/video.mp4")
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 import subprocess
@@ -23,6 +28,31 @@ from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Quality presets
+# ---------------------------------------------------------------------------
+
+QUALITY_PRESETS: dict[str, dict] = {
+    "draft": {
+        "preset": "ultrafast",
+        "crf": 28,
+        "description": "Fast encoding for preview",
+    },
+    "final": {
+        "preset": "slow",
+        "crf": 18,
+        "description": "High quality for publication",
+    },
+}
+
+# Default intro/outro duration when generating from images
+INTRO_DURATION = 4.0
+OUTRO_DURATION = 4.0
+
+# Audio output settings
+AUDIO_SAMPLE_RATE = 44100
+AUDIO_CHANNELS = 2
 
 
 def _check_ffmpeg() -> None:
@@ -601,3 +631,311 @@ class VideoAssembler:
             str(output_path),
         )
         Path(concat_file).unlink(missing_ok=True)
+
+    # ------------------------------------------------------------------
+    # Per-sequence assembly (recording + narration + subtitles)
+    # ------------------------------------------------------------------
+
+    def assemble_sequence(
+        self,
+        sequence_id: str,
+        lang: str,
+        base_dir: str | Path,
+        config: dict,
+        quality: str = "draft",
+        burn_subtitles: bool = True,
+        dry_run: bool = False,
+    ) -> Optional[Path]:
+        """
+        Assemble a single sequence: recording + narration + subtitles.
+
+        Looks for files in the standard directory layout::
+
+            output/{lang}/recordings/{sequence_id}.mp4
+            output/{lang}/narrations/{sequence_id}.wav
+            output/{lang}/subtitles/{sequence_id}.srt
+            output/{lang}/captures/intro.png  (optional)
+            output/{lang}/captures/outro.png  (optional)
+
+        Parameters
+        ----------
+        sequence_id : str
+            Sequence identifier (e.g. ``"a1_intro"``).
+        lang : str
+            Language code (e.g. ``"fr"``).
+        base_dir : str | Path
+            Project base directory containing ``output/``.
+        config : dict
+            Full project configuration.
+        quality : str
+            Encoding preset: ``"draft"`` or ``"final"``.
+        burn_subtitles : bool
+            If True, burn SRT subtitles into the video.
+        dry_run : bool
+            If True, log commands without executing.
+
+        Returns
+        -------
+        Path or None
+            Path to the assembled video, or None on failure.
+        """
+        base_dir = Path(base_dir)
+        obs_cfg = config.get("obs", {})
+        narr_cfg = config.get("narration", {})
+        sub_cfg = config.get("subtitles", {})
+        out_cfg = config.get("output", {})
+        cap_cfg = config.get("capture", {})
+
+        def _resolve(template: str) -> Path:
+            return base_dir / template.replace("{lang}", lang)
+
+        rec_dir = _resolve(obs_cfg.get("output_dir", f"output/{lang}/recordings"))
+        narr_dir = _resolve(narr_cfg.get("output_dir", f"output/{lang}/narrations"))
+        sub_dir = _resolve(sub_cfg.get("output_dir", f"output/{lang}/subtitles"))
+        cap_dir = _resolve(cap_cfg.get("output_dir", f"output/{lang}/captures"))
+        final_dir = _resolve(out_cfg.get("final_dir", f"output/{lang}/final"))
+
+        recording = rec_dir / f"{sequence_id}.mp4"
+        narration = narr_dir / f"{sequence_id}.wav"
+        subtitle = sub_dir / f"{sequence_id}.srt"
+        intro_img = cap_dir / "intro.png"
+        outro_img = cap_dir / "outro.png"
+        output = final_dir / f"{sequence_id}.mp4"
+
+        # Check required files
+        if not recording.exists():
+            logger.warning("Recording missing: %s", recording)
+            return None
+        if not narration.exists():
+            logger.warning("Narration missing: %s", narration)
+            return None
+
+        has_subs = burn_subtitles and subtitle.exists()
+        has_intro = intro_img.exists()
+        has_outro = outro_img.exists()
+
+        # Get durations
+        video_dur = get_media_duration(recording)
+        audio_dur = get_media_duration(narration)
+        if video_dur is None or audio_dur is None:
+            if not dry_run:
+                logger.error("Cannot read media durations")
+                return None
+            video_dur = video_dur or 60.0
+            audio_dur = audio_dur or 60.0
+
+        # Encoding preset
+        preset = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["draft"])
+        resolution = out_cfg.get("resolution", "1920x1080")
+        width, height = resolution.split("x")
+        fps = out_cfg.get("fps", 30)
+
+        if not dry_run:
+            final_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build filter_complex
+        filter_parts: list[str] = []
+
+        # Scale + fps
+        filter_parts.append(
+            f"[0:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
+            f"fps={fps},setsar=1[v_scaled]"
+        )
+
+        # Duration matching
+        if audio_dur > video_dur:
+            pad = audio_dur - video_dur
+            filter_parts.append(
+                f"[v_scaled]tpad=stop_mode=clone:stop_duration={pad:.3f}[v_padded]"
+            )
+        else:
+            filter_parts.append(
+                f"[v_scaled]trim=0:{audio_dur:.3f},setpts=PTS-STARTPTS[v_padded]"
+            )
+        current_v = "[v_padded]"
+
+        # Subtitle burn
+        if has_subs:
+            srt_escaped = str(subtitle).replace("\\", "/").replace(":", "\\:")
+            sub_font = sub_cfg.get("font", "Arial")
+            sub_size = sub_cfg.get("font_size", 24)
+            pos = sub_cfg.get("position", "bottom")
+            alignment = 2 if pos == "bottom" else 6
+            force_style = (
+                f"FontName={sub_font},FontSize={sub_size},"
+                f"PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+                f"BorderStyle=3,Outline=2,Shadow=1,"
+                f"Alignment={alignment},MarginV=30"
+            )
+            filter_parts.append(
+                f"{current_v}subtitles='{srt_escaped}':force_style='{force_style}'[v_sub]"
+            )
+            current_v = "[v_sub]"
+
+        # Audio resample
+        filter_parts.append(
+            f"[1:a]aresample={AUDIO_SAMPLE_RATE},"
+            f"aformat=sample_fmts=fltp:channel_layouts=stereo[a_out]"
+        )
+
+        # Final video label
+        if current_v != "[v_out]":
+            filter_parts.append(f"{current_v}null[v_out]")
+
+        filter_complex = ";\n".join(filter_parts)
+
+        # Build FFmpeg command
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(recording),
+            "-i", str(narration),
+            "-filter_complex", filter_complex,
+            "-map", "[v_out]",
+            "-map", "[a_out]",
+            "-c:v", "libx264",
+            "-preset", preset["preset"],
+            "-crf", str(preset["crf"]),
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", str(AUDIO_SAMPLE_RATE),
+            "-ac", str(AUDIO_CHANNELS),
+            "-movflags", "+faststart",
+            "-pix_fmt", "yuv420p",
+            str(output),
+        ]
+
+        if dry_run:
+            logger.info("[DRY-RUN] %s", " ".join(str(c) for c in cmd))
+            return output
+
+        logger.info("Assembling %s (%s)…", sequence_id, quality)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=600,
+        )
+        if result.returncode != 0:
+            logger.error("FFmpeg failed:\n%s", result.stderr[-2000:])
+            return None
+
+        if output.exists():
+            dur = get_media_duration(output)
+            size = output.stat().st_size
+            logger.info(
+                "Assembled %s — %s, %.1f MB",
+                output.name,
+                format_duration(dur) if dur else "?",
+                size / (1024 * 1024),
+            )
+        return output
+
+    @staticmethod
+    def create_image_clip(
+        image_path: str | Path,
+        output_path: str | Path,
+        duration: float = 4.0,
+        width: int = 1920,
+        height: int = 1080,
+        fps: int = 30,
+        quality: str = "draft",
+    ) -> Path:
+        """
+        Generate a video clip from a static image (for intro/outro).
+
+        Parameters
+        ----------
+        image_path : str | Path
+            Input PNG/JPG image.
+        output_path : str | Path
+            Output MP4 path.
+        duration : float
+            Clip duration in seconds.
+        width, height : int
+            Video resolution.
+        fps : int
+            Frame rate.
+        quality : str
+            Encoding preset name.
+
+        Returns
+        -------
+        Path
+            Path to the generated clip.
+        """
+        preset = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["draft"])
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        _run_ffmpeg(
+            "-loop", "1",
+            "-i", str(image_path),
+            "-f", "lavfi",
+            "-i", f"anullsrc=r={AUDIO_SAMPLE_RATE}:cl=stereo",
+            "-t", f"{duration:.3f}",
+            "-vf", (
+                f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+                f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
+                f"fps={fps},setsar=1"
+            ),
+            "-c:v", "libx264",
+            "-preset", preset["preset"],
+            "-crf", str(preset["crf"]),
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", str(AUDIO_SAMPLE_RATE),
+            "-ac", str(AUDIO_CHANNELS),
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            str(output_path),
+        )
+        logger.info("Created image clip: %s (%.1fs)", output_path.name, duration)
+        return output_path
+
+
+# ---------------------------------------------------------------------------
+# Module-level utilities
+# ---------------------------------------------------------------------------
+
+
+def get_media_duration(file_path: str | Path) -> Optional[float]:
+    """
+    Get the duration of a media file in seconds via ffprobe.
+
+    Parameters
+    ----------
+    file_path : str | Path
+        Path to the media file.
+
+    Returns
+    -------
+    float or None
+        Duration in seconds, or None if unavailable.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet",
+                "-print_format", "json",
+                "-show_format",
+                str(file_path),
+            ],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            return None
+        info = json.loads(result.stdout)
+        duration = info.get("format", {}).get("duration")
+        if duration is not None:
+            return float(duration)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, FileNotFoundError):
+        pass
+    return None
+
+
+def format_duration(seconds: float) -> str:
+    """Format seconds as a human-readable ``Xm XXs`` string."""
+    minutes = int(seconds // 60)
+    secs = int(seconds % 60)
+    if minutes > 0:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"

@@ -3,7 +3,8 @@ Narrator — TTS Audio Generation
 =================================
 Generates narration audio files for each video sequence using either
 edge-tts (free, Microsoft voices), ElevenLabs (paid, higher quality),
-or F5-TTS (open-source, zero-shot voice cloning).
+F5-TTS (open-source, zero-shot voice cloning), or XTTS v2 (Coqui TTS,
+multilingual voice cloning).
 
 Usage:
     from video_automation.core.narrator import Narrator
@@ -48,6 +49,13 @@ class Narrator:
         self.f5_conda_env: str = config.get("f5_conda_env", "f5-tts")
         self.f5_remove_silence: bool = config.get("f5_remove_silence", False)
 
+        # XTTS v2 specific config
+        self.xtts_ref_audio: Optional[str] = config.get("xtts_ref_audio")
+        self.xtts_language: str = config.get("xtts_language", "en")
+        self.xtts_speed: float = config.get("xtts_speed", 1.0)
+        self.xtts_gpu: bool = config.get("xtts_gpu", True)
+        self.xtts_conda_env: str = config.get("xtts_conda_env", "xtts")
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -69,8 +77,13 @@ class Narrator:
             return self._generate_elevenlabs(text, output_path, voice)
         elif self.engine == "f5-tts":
             return self._generate_f5_tts(text, output_path)
+        elif self.engine in ("xtts", "xtts-v2", "coqui"):
+            return self._generate_xtts(text, output_path)
         else:
-            raise ValueError(f"Unknown TTS engine: {self.engine}. Use 'edge-tts', 'elevenlabs', or 'f5-tts'.")
+            raise ValueError(
+                f"Unknown TTS engine: {self.engine}. "
+                "Use 'edge-tts', 'elevenlabs', 'f5-tts', or 'xtts-v2'."
+            )
 
     def generate_all_narrations(
         self,
@@ -235,6 +248,89 @@ class Narrator:
                     self.get_narration_duration(output_path))
         return output_path
 
+    def _generate_xtts(self, text: str, output_path: Path) -> Path:
+        """Generate audio using XTTS v2 (Coqui TTS) via bridge subprocess."""
+        if not self.xtts_ref_audio:
+            raise ValueError(
+                "xtts_ref_audio must be set in narration config when using xtts-v2 engine."
+            )
+
+        ref_audio_path = Path(self.xtts_ref_audio).resolve()
+        if not ref_audio_path.exists():
+            raise FileNotFoundError(f"XTTS reference audio not found: {ref_audio_path}")
+
+        wav_output = output_path.with_suffix(".wav").resolve()
+
+        bridge_script = Path(__file__).parent.parent / "bridges" / "xtts_bridge.py"
+        if not bridge_script.exists():
+            raise FileNotFoundError(f"XTTS bridge script not found: {bridge_script}")
+
+        # Find Python in conda env or fall back to system Python
+        conda_python = Path.home() / "miniconda3" / "envs" / self.xtts_conda_env / "python.exe"
+        if not conda_python.exists():
+            # Try Linux path
+            conda_python = (
+                Path.home() / "miniconda3" / "envs" / self.xtts_conda_env / "bin" / "python"
+            )
+        if not conda_python.exists():
+            raise RuntimeError(
+                f"Conda env Python not found for '{self.xtts_conda_env}'.\n"
+                f"Create the environment:\n"
+                f"  conda create -n {self.xtts_conda_env} python=3.11 -y\n"
+                f"  conda activate {self.xtts_conda_env}\n"
+                "  pip install TTS torch torchaudio"
+            )
+
+        import tempfile
+
+        text_file = Path(tempfile.mktemp(suffix="_xtts.txt"))
+        text_file.write_text(text, encoding="utf-8")
+
+        cmd = [
+            str(conda_python),
+            "-X", "utf8",
+            str(bridge_script),
+            "--ref_audio", str(ref_audio_path),
+            "--text_file", str(text_file),
+            "--output_file", str(wav_output),
+            "--language", self.xtts_language,
+            "--speed", str(self.xtts_speed),
+        ]
+        if self.xtts_gpu:
+            cmd.append("--gpu")
+
+        logger.info(
+            "XTTS v2 generating: %s (lang=%s, conda=%s)",
+            output_path.name, self.xtts_language, self.xtts_conda_env,
+        )
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"XTTS v2 timed out after 300s for: {output_path.name}")
+        finally:
+            text_file.unlink(missing_ok=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"XTTS v2 failed (exit {result.returncode}):\n{result.stderr[:500]}"
+            )
+
+        if not wav_output.exists() or wav_output.stat().st_size == 0:
+            raise RuntimeError(f"XTTS v2 produced empty/missing file: {wav_output}")
+
+        if output_path.suffix.lower() == ".mp3":
+            self._wav_to_mp3(wav_output, output_path)
+            wav_output.unlink(missing_ok=True)
+        else:
+            output_path = wav_output
+
+        logger.info(
+            "XTTS v2 generated: %s (%.1fs)",
+            output_path.name, self.get_narration_duration(output_path),
+        )
+        return output_path
+
     @staticmethod
     def _wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
         try:
@@ -285,3 +381,39 @@ def get_narration_texts(
     if video and video in data:
         return data[video]
     return data.get("original", {})
+
+
+def load_narrations_multilingual(
+    narrations_dir: str | Path,
+    lang: str,
+) -> dict[str, str]:
+    """
+    Load narrations from a per-language YAML file.
+
+    Expects files named ``{lang}.yaml`` inside *narrations_dir*,
+    where each key is a sequence_id and the value is the narration text.
+
+    Parameters
+    ----------
+    narrations_dir : str | Path
+        Directory containing ``fr.yaml``, ``en.yaml``, etc.
+    lang : str
+        Language code.
+
+    Returns
+    -------
+    dict[str, str]
+        Mapping of sequence_id → narration text.
+    """
+    import yaml
+
+    yaml_path = Path(narrations_dir) / f"{lang}.yaml"
+    if not yaml_path.exists():
+        logger.warning("Narration file not found: %s", yaml_path)
+        return {}
+    with open(yaml_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not isinstance(data, dict):
+        return {}
+    # Filter to only string values (skip metadata keys)
+    return {k: v for k, v in data.items() if isinstance(v, str)}
