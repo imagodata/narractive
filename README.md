@@ -2,38 +2,52 @@
 
 A modular Python framework for automated video production — from narration to final cut.
 
-Narractive orchestrates the full pipeline: UI interaction (PyAutoGUI), screen recording (OBS or headless), text-to-speech narration, Mermaid diagram generation, and FFmpeg assembly. Script your sequences, define narration cues, and let the framework produce polished demo videos hands-free.
+Narractive orchestrates the full pipeline: UI interaction (PyAutoGUI), screen recording (OBS or headless), text-to-speech narration, Mermaid diagram generation, subtitle generation, and FFmpeg assembly. Script your sequences, define narration cues, and let the framework produce polished demo videos hands-free.
 
 ## Features
 
 - **Dual recording backends**: OBS WebSocket (desktop) or headless frame capture (Docker/Xvfb)
-- **Multi-engine TTS narration**: edge-tts (free), ElevenLabs (premium), F5-TTS (voice cloning)
+- **Multi-engine TTS narration**: edge-tts (free), ElevenLabs (premium), F5-TTS (voice cloning), XTTS v2 (multilingual cloning)
 - **Timeline-synchronized sequences**: Narration cues paired with UI actions
-- **Mermaid diagram slides**: HTML + PNG generation with dark theme
-- **FFmpeg post-production**: Clip concatenation, narration mixing, timecode-based assembly
+- **Mermaid diagram slides**: HTML + PNG via Playwright, mmdc, or mermaid.ink API (zero-dep)
+- **SRT subtitle generation**: WPM-based timing from narration text, multilingual defaults
+- **Multilingual diagram labels**: i18n base class with automatic language fallback
+- **FFmpeg post-production**: Quality presets (draft/final), subtitle burn, intro/outro from images, duration matching
 - **Interactive calibration**: Record UI element positions for pixel-perfect automation
 - **Docker support**: Reproducible headless production in CI/CD
 
 ## Quick Start
 
 ```bash
-# Install
+# Install from PyPI
+pip install narractive
+
+# Or install from source
 pip install -e .
 
 # Copy and configure
 cp config.template.yaml config.yaml
 
 # Calibrate UI positions (interactive)
-video-automation --calibrate --config config.yaml
+narractive --calibrate --config config.yaml
 
-# Generate narration
-video-automation --narration --narrations-file narrations.yaml
+# Generate subtitles from narrations (multilingual)
+narractive --subtitles --narrations-dir narrations/ --config config.yaml
+
+# Generate subtitles (single language)
+narractive --subtitles --lang fr --narrations-dir narrations/
 
 # Generate diagrams
-video-automation --diagrams --diagrams-module my_project.diagrams.mermaid_definitions
+narractive --diagrams --diagrams-module my_project.diagrams.mermaid_definitions
 
 # Record all sequences
-video-automation --all --sequences-package my_project.sequences --config config.yaml
+narractive --all --sequences-package my_project.sequences --config config.yaml
+
+# Assemble final video (fast preview)
+narractive --assemble --quality draft --project-name "My Project"
+
+# Assemble final video (publication quality)
+narractive --assemble --quality final --project-name "My Project"
 
 # Or headless (Docker)
 docker compose run --rm video --all --sequences-package my_project.sequences
@@ -48,12 +62,19 @@ narractive/
 │   │   ├── app_automator.py      # PyAutoGUI + window control
 │   │   ├── obs_controller.py     # OBS WebSocket 5.x
 │   │   ├── frame_capturer.py     # Headless Xvfb capture
-│   │   ├── narrator.py           # TTS (edge-tts/ElevenLabs/F5-TTS)
+│   │   ├── narrator.py           # TTS (edge-tts/ElevenLabs/F5-TTS/XTTS v2)
+│   │   ├── subtitles.py          # SRT generation from narration text
 │   │   ├── timeline.py           # Narration-synchronized cues
-│   │   ├── diagram_generator.py  # Mermaid → HTML/PNG
-│   │   └── video_assembler.py    # FFmpeg post-production
+│   │   ├── diagram_generator.py  # Mermaid → HTML/PNG (Playwright/mmdc/API)
+│   │   └── video_assembler.py    # FFmpeg post-production + quality presets
 │   ├── sequences/
 │   │   └── base.py               # VideoSequence + TimelineSequence
+│   ├── bridges/
+│   │   ├── f5_tts_bridge.py      # F5-TTS subprocess bridge
+│   │   └── xtts_bridge.py        # XTTS v2 (Coqui TTS) subprocess bridge
+│   ├── diagrams/
+│   │   ├── i18n.py               # Multilingual diagram labels
+│   │   └── template.html         # Mermaid HTML template
 │   ├── scripts/
 │   │   ├── calibrate.py          # Interactive UI calibration
 │   │   └── setup_obs.py          # OBS auto-configuration
@@ -61,10 +82,6 @@ narractive/
 │
 ├── examples/
 │   └── filtermate/               # Example project (QGIS plugin demo)
-│       ├── sequences/            # 11 original + 7 v01 sequences
-│       ├── diagrams/             # 20 Mermaid diagram definitions
-│       ├── narrations.yaml       # French narration scripts
-│       └── config.yaml           # Calibrated UI positions
 │
 ├── config.template.yaml          # Configuration template
 ├── Dockerfile                    # Headless Docker image
@@ -118,13 +135,30 @@ class MyDemo(TimelineSequence):
         ]
 ```
 
-### 3. Register sequences
+### 3. Multilingual diagram labels
+
+```python
+from video_automation.diagrams.i18n import DiagramLabels
+
+labels = DiagramLabels(
+    labels={
+        "server": {"fr": "Serveur", "en": "Server", "pt": "Servidor"},
+        "client": {"fr": "Client", "en": "Client", "pt": "Cliente"},
+    },
+    titles={
+        "architecture": {"fr": "Architecture", "en": "Architecture"},
+    },
+    default_lang="fr",
+)
+
+name = labels.l("server", "en")  # "Server"
+```
+
+### 4. Register sequences
 
 Create `my_project/sequences/__init__.py`:
 
 ```python
-from video_automation.sequences.base import VideoSequence
-# Import your sequence modules here to register them
 from my_project.sequences.seq00_intro import MyIntro
 from my_project.sequences.seq01_demo import MyDemo
 
@@ -133,8 +167,8 @@ SEQUENCES = [MyIntro, MyDemo]
 
 Then run:
 ```bash
-video-automation --list --sequences-package my_project.sequences
-video-automation --all --sequences-package my_project.sequences
+narractive --list --sequences-package my_project.sequences
+narractive --all --sequences-package my_project.sequences
 ```
 
 ## Configuration
@@ -147,17 +181,19 @@ See `config.template.yaml` for all available options. Key sections:
 | `app` | Window title, panel name, calibrated UI positions |
 | `timing` | Click/type/scroll delays, transition pauses |
 | `diagrams` | Mermaid rendering (resolution, theme, colors) |
-| `narration` | TTS engine, voice, speed, F5-TTS options |
+| `narration` | TTS engine, voice, speed, F5-TTS/XTTS options |
+| `subtitles` | SRT generation (enabled, max chars, max lines) |
 | `capture` | Headless frame capture (FPS, resolution, display) |
-| `output` | Final video encoding (resolution, fps, codec) |
+| `output` | Final video encoding (resolution, fps, codec, quality preset) |
 
 ## TTS Engines
 
-| Engine | Cost | Quality | Setup |
-|--------|------|---------|-------|
-| edge-tts | Free | Good | `pip install edge-tts` |
-| ElevenLabs | Paid | Excellent | `pip install elevenlabs` + API key |
-| F5-TTS | Free | Excellent | Conda env + GPU recommended |
+| Engine | Cost | Quality | Multilingual | Setup |
+|--------|------|---------|-------------|-------|
+| edge-tts | Free | Good | Yes | `pip install edge-tts` (included) |
+| ElevenLabs | Paid | Excellent | Yes | `pip install elevenlabs` + API key |
+| F5-TTS | Free | Excellent | No | Conda env + GPU recommended |
+| XTTS v2 | Free | Excellent | Yes | `pip install TTS` + GPU recommended |
 
 ## Requirements
 
