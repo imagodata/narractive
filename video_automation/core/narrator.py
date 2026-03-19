@@ -6,22 +6,295 @@ edge-tts (free, Microsoft voices), ElevenLabs (paid, higher quality),
 F5-TTS (open-source, zero-shot voice cloning), or XTTS v2 (Coqui TTS,
 multilingual voice cloning).
 
-Usage:
+Optionally preprocesses text through :class:`TextPreprocessor` to improve
+TTS pronunciation of acronyms, numbers, and proper nouns.
+
+Usage::
+
     from video_automation.core.narrator import Narrator
     narrator = Narrator(config["narration"])
     path = narrator.generate_narration("Your text here", "output/narration/seq00.mp3")
     duration = narrator.get_narration_duration(path)
+
+    # With pronunciation preprocessing:
+    narrator = Narrator(config["narration"], pronunciation_config=config["pronunciation"])
+    path = narrator.generate_narration("Open the PDF", "output/narration/seq01.mp3", lang="fr")
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import subprocess
 from pathlib import Path
 from typing import Optional
 
+from video_automation.core.text_preprocessor import TextPreprocessor
+
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Reference audio preparation utilities
+# ---------------------------------------------------------------------------
+
+
+def _get_audio_info(audio_path: Path) -> dict:
+    """
+    Get audio file metadata via ffprobe.
+
+    Parameters
+    ----------
+    audio_path : Path
+        Path to the audio file to inspect.
+
+    Returns
+    -------
+    dict
+        Keys: ``sample_rate`` (int), ``channels`` (int), ``duration`` (float),
+        ``codec`` (str).  Returns an empty dict if ffprobe is unavailable or
+        the file cannot be analysed.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet",
+                "-print_format", "json",
+                "-show_streams", "-show_format",
+                str(audio_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return {}
+        data = json.loads(result.stdout)
+        stream = data.get("streams", [{}])[0]
+        fmt = data.get("format", {})
+        return {
+            "sample_rate": int(stream.get("sample_rate", 0)),
+            "channels": int(stream.get("channels", 0)),
+            "duration": float(fmt.get("duration", 0)),
+            "codec": stream.get("codec_name", "unknown"),
+        }
+    except Exception as exc:
+        logger.warning("ffprobe unavailable or error: %s", exc)
+        return {}
+
+
+def prepare_reference_audio(
+    ref_audio: Path,
+    target_sr: int = 24000,
+    target_channels: int = 1,
+    max_duration: float = 12.0,
+    min_duration: float = 3.0,
+) -> Path:
+    """
+    Prepare a voice-cloning reference audio for F5-TTS / XTTS v2.
+
+    Applies the following transformations when needed:
+
+    * Stereo to mono conversion
+    * Resampling to *target_sr* (default 24 kHz)
+    * Trimming to *max_duration* seconds
+    * Peak normalisation via the ``loudnorm`` filter (-16 LUFS, -1 dB TP)
+
+    The prepared file is cached next to the original as
+    ``{stem}_prepared.wav`` and reused when it is newer than the source.
+
+    Parameters
+    ----------
+    ref_audio : Path
+        Path to the original reference audio file.
+    target_sr : int, optional
+        Target sample rate in Hz (default ``24000``).
+    target_channels : int, optional
+        Target number of channels (default ``1`` = mono).
+    max_duration : float, optional
+        Maximum duration in seconds (default ``12.0``).
+    min_duration : float, optional
+        Minimum recommended duration in seconds (default ``3.0``).
+        A warning is logged if the source is shorter.
+
+    Returns
+    -------
+    Path
+        Path to the prepared file, or the original path if already conformant
+        or if ffprobe/ffmpeg are not available.
+    """
+    prepared_path = ref_audio.parent / f"{ref_audio.stem}_prepared.wav"
+
+    # Reuse cached prepared file if it is newer than the source
+    if prepared_path.exists() and prepared_path.stat().st_mtime > ref_audio.stat().st_mtime:
+        logger.info("Reference audio: reusing cached prepared file %s", prepared_path.name)
+        return prepared_path
+
+    info = _get_audio_info(ref_audio)
+    if not info:
+        logger.warning(
+            "Cannot analyse %s (ffprobe unavailable?), using original file as-is",
+            ref_audio.name,
+        )
+        return ref_audio
+
+    needs_conversion = False
+    reasons: list[str] = []
+
+    if info["channels"] != target_channels:
+        needs_conversion = True
+        reasons.append(f"channels {info['channels']} -> {target_channels}")
+
+    if info["sample_rate"] != target_sr:
+        needs_conversion = True
+        reasons.append(f"resample {info['sample_rate']}Hz -> {target_sr}Hz")
+
+    if info["duration"] > max_duration:
+        needs_conversion = True
+        reasons.append(f"trim {info['duration']:.1f}s -> {max_duration:.1f}s")
+
+    if info["duration"] < min_duration:
+        logger.warning(
+            "Reference audio too short (%.1fs < %.1fs). Recommended: 5-10 seconds.",
+            info["duration"],
+            min_duration,
+        )
+
+    if not needs_conversion:
+        logger.info(
+            "Reference audio already conformant (%dHz, %dch, %.1fs)",
+            info["sample_rate"],
+            info["channels"],
+            info["duration"],
+        )
+        return ref_audio
+
+    # Build ffmpeg conversion command
+    logger.info("Preparing reference audio: %s", ", ".join(reasons))
+
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", str(ref_audio),
+        "-ac", str(target_channels),
+        "-ar", str(target_sr),
+        "-sample_fmt", "s16",
+        "-af", f"loudnorm=I=-16:TP=-1:LRA=11,atrim=0:{max_duration}",
+        str(prepared_path),
+    ]
+
+    try:
+        result = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "ffmpeg conversion failed: %s",
+                result.stderr[-200:] if result.stderr else "unknown error",
+            )
+            return ref_audio
+
+        # Verify the produced file
+        prep_info = _get_audio_info(prepared_path)
+        if prep_info:
+            logger.info(
+                "Reference audio prepared: %s (%dHz, %dch, %.1fs)",
+                prepared_path.name,
+                prep_info["sample_rate"],
+                prep_info["channels"],
+                prep_info["duration"],
+            )
+        return prepared_path
+
+    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+        logger.warning(
+            "ffmpeg unavailable: %s. Using original reference audio.", exc
+        )
+        return ref_audio
+
+
+# ---------------------------------------------------------------------------
+# Post-processing utilities
+# ---------------------------------------------------------------------------
+
+
+def postprocess_audio(
+    audio_path: Path,
+    target_lufs: float = -16.0,
+    target_tp: float = -1.0,
+) -> Path:
+    """
+    Post-process generated audio with EBU R128 loudness normalization.
+
+    Uses ffmpeg's loudnorm filter to normalize perceived loudness.
+    Overwrites the file in-place via a temporary file.
+
+    Parameters
+    ----------
+    audio_path : Path
+        Path to the audio file to normalize.
+    target_lufs : float
+        Target integrated loudness in LUFS (-16 = podcast/narration standard).
+    target_tp : float
+        Maximum true peak in dBTP (-1.0 = safe for all encoders).
+
+    Returns
+    -------
+    Path
+        Path to the normalized audio (same as input).
+    """
+    if not audio_path.exists():
+        logger.warning("Audio file not found for normalization: %s", audio_path)
+        return audio_path
+
+    temp_path = audio_path.parent / f"{audio_path.stem}_postproc.wav"
+
+    ffmpeg_cmd = [
+        "ffmpeg", "-y",
+        "-i", str(audio_path),
+        "-af", f"loudnorm=I={target_lufs}:TP={target_tp}:LRA=11:print_format=summary",
+        str(temp_path),
+    ]
+
+    try:
+        result = subprocess.run(
+            ffmpeg_cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "Loudness normalization failed: %s",
+                result.stderr[-200:] if result.stderr else "unknown error",
+            )
+            return audio_path
+
+        # Replace original with normalized file
+        temp_path.replace(audio_path)
+        logger.info(
+            "EBU R128 normalization applied to %s (target: %.0f LUFS, TP: %.0f dBTP)",
+            audio_path.name, target_lufs, target_tp,
+        )
+        return audio_path
+
+    except subprocess.TimeoutExpired:
+        logger.warning("ffmpeg timed out during loudness normalization of %s", audio_path.name)
+        if temp_path.exists():
+            temp_path.unlink()
+        return audio_path
+
+    except FileNotFoundError:
+        logger.warning(
+            "ffmpeg not found — skipping loudness normalization. "
+            "Install ffmpeg to enable EBU R128 normalization."
+        )
+        if temp_path.exists():
+            temp_path.unlink()
+        return audio_path
 
 
 class Narrator:
@@ -32,9 +305,18 @@ class Narrator:
     ----------
     config : dict
         The 'narration' section from config.yaml.
+    pronunciation_config : dict | None
+        The ``pronunciation`` section from config.yaml. When provided, a
+        :class:`~video_automation.core.text_preprocessor.TextPreprocessor`
+        is created to transform text before sending it to the TTS engine.
+        See :class:`TextPreprocessor` for the expected YAML structure.
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(
+        self,
+        config: dict,
+        pronunciation_config: dict | None = None,
+    ) -> None:
         self.engine: str = config.get("engine", "edge-tts")
         self.voice: str = config.get("voice", "fr-FR-HenriNeural")
         self.output_dir = Path(config.get("output_dir", "output/narration"))
@@ -48,6 +330,15 @@ class Narrator:
         self.f5_speed: float = config.get("f5_speed", 1.0)
         self.f5_conda_env: str = config.get("f5_conda_env", "f5-tts")
         self.f5_remove_silence: bool = config.get("f5_remove_silence", False)
+        # Advanced F5-TTS inference parameters
+        self.f5_nfe_step: int = config.get("f5_nfe_step", 32)
+        self.f5_cfg_strength: float = config.get("f5_cfg_strength", 2.0)
+        self.f5_sway_sampling_coef: float = config.get("f5_sway_sampling_coef", -1.0)
+        self.f5_cross_fade_duration: float = config.get("f5_cross_fade_duration", 0.15)
+        self.f5_target_rms: float = config.get("f5_target_rms", 0.1)
+        self.f5_seed: int = config.get("f5_seed", -1)
+        self.f5_ckpt_file: str | None = config.get("f5_ckpt_file")
+        self.f5_vocab_file: str | None = config.get("f5_vocab_file")
 
         # XTTS v2 specific config
         self.xtts_ref_audio: Optional[str] = config.get("xtts_ref_audio")
@@ -55,6 +346,17 @@ class Narrator:
         self.xtts_speed: float = config.get("xtts_speed", 1.0)
         self.xtts_gpu: bool = config.get("xtts_gpu", True)
         self.xtts_conda_env: str = config.get("xtts_conda_env", "xtts")
+
+        # Loudness normalization (EBU R128)
+        self.normalize_loudness: bool = config.get("normalize_loudness", False)
+        self.target_lufs: float = config.get("target_lufs", -16.0)
+        self.target_tp: float = config.get("target_tp", -1.0)
+
+        # Text preprocessor for pronunciation improvement
+        self.preprocessor: TextPreprocessor | None = None
+        if pronunciation_config is not None:
+            self.preprocessor = TextPreprocessor(config=pronunciation_config)
+            logger.info("Text preprocessor enabled for TTS pronunciation")
 
     # ------------------------------------------------------------------
     # Public API
@@ -65,30 +367,67 @@ class Narrator:
         text: str,
         output_path: str | Path,
         voice: Optional[str] = None,
+        lang: str = "fr",
     ) -> Path:
-        """Generate TTS audio for the given text."""
+        """
+        Generate TTS audio for the given text.
+
+        Parameters
+        ----------
+        text : str
+            Raw narration text.
+        output_path : str | Path
+            Destination file path for the generated audio.
+        voice : str | None
+            Override voice (engine-specific). Falls back to ``self.voice``.
+        lang : str
+            Language code for text preprocessing (``"fr"``, ``"en"``,
+            ``"pt"``). Only used when a ``pronunciation_config`` was
+            provided at init time. Defaults to ``"fr"``.
+
+        Returns
+        -------
+        Path
+            Path to the generated audio file.
+        """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         voice = voice or self.voice
 
+        # Preprocess text for better TTS pronunciation
+        if self.preprocessor is not None:
+            text = self.preprocessor.preprocess(text, lang=lang)
+            logger.debug("Preprocessed text for TTS: %s", text[:120])
+
         if self.engine == "edge-tts":
-            return self._generate_edge_tts(text, output_path, voice)
+            result = self._generate_edge_tts(text, output_path, voice)
         elif self.engine == "elevenlabs":
-            return self._generate_elevenlabs(text, output_path, voice)
+            result = self._generate_elevenlabs(text, output_path, voice)
         elif self.engine == "f5-tts":
-            return self._generate_f5_tts(text, output_path)
+            result = self._generate_f5_tts(text, output_path)
         elif self.engine in ("xtts", "xtts-v2", "coqui"):
-            return self._generate_xtts(text, output_path)
+            result = self._generate_xtts(text, output_path)
         else:
             raise ValueError(
                 f"Unknown TTS engine: {self.engine}. "
                 "Use 'edge-tts', 'elevenlabs', 'f5-tts', or 'xtts-v2'."
             )
 
+        # Post-process: EBU R128 loudness normalization (opt-in)
+        if self.normalize_loudness:
+            result = postprocess_audio(
+                result,
+                target_lufs=self.target_lufs,
+                target_tp=self.target_tp,
+            )
+
+        return result
+
     def generate_all_narrations(
         self,
         script_dict: dict[str, str],
         output_dir: Optional[str | Path] = None,
+        lang: str = "fr",
     ) -> dict[str, Path]:
         """Batch-generate narration audio for all sequences."""
         out_dir = Path(output_dir) if output_dir else self.output_dir
@@ -98,7 +437,7 @@ class Narrator:
             output_path = out_dir / f"{seq_id}_narration.mp3"
             logger.info("Generating narration for %s...", seq_id)
             try:
-                results[seq_id] = self.generate_narration(text, output_path)
+                results[seq_id] = self.generate_narration(text, output_path, lang=lang)
             except Exception as exc:  # noqa: BLE001
                 logger.error("Failed to generate narration for %s: %s", seq_id, exc)
         return results
@@ -186,6 +525,9 @@ class Narrator:
         if not ref_audio_path.exists():
             raise FileNotFoundError(f"F5-TTS reference audio not found: {ref_audio_path}")
 
+        # Prepare reference audio (mono, 24kHz, trimmed, normalized)
+        ref_audio_path = prepare_reference_audio(ref_audio_path)
+
         wav_output = output_path.with_suffix(".wav").resolve()
 
         bridge_script = Path(__file__).parent.parent / "bridges" / "f5_tts_bridge.py"
@@ -218,9 +560,20 @@ class Narrator:
             "--gen_text_file", str(gen_text_file),
             "--output_file", str(wav_output),
             "--speed", str(self.f5_speed),
+            # Advanced inference parameters
+            "--nfe_step", str(self.f5_nfe_step),
+            "--cfg_strength", str(self.f5_cfg_strength),
+            "--sway_sampling_coef", str(self.f5_sway_sampling_coef),
+            "--cross_fade_duration", str(self.f5_cross_fade_duration),
+            "--target_rms", str(self.f5_target_rms),
+            "--seed", str(self.f5_seed),
         ]
         if self.f5_remove_silence:
             cmd.append("--remove_silence")
+        if self.f5_ckpt_file:
+            cmd.extend(["--ckpt_file", self.f5_ckpt_file])
+        if self.f5_vocab_file:
+            cmd.extend(["--vocab_file", self.f5_vocab_file])
 
         logger.info("F5-TTS generating: %s (conda env: %s)", output_path.name, self.f5_conda_env)
 
@@ -258,6 +611,9 @@ class Narrator:
         ref_audio_path = Path(self.xtts_ref_audio).resolve()
         if not ref_audio_path.exists():
             raise FileNotFoundError(f"XTTS reference audio not found: {ref_audio_path}")
+
+        # Prepare reference audio (mono, 24kHz, trimmed, normalized)
+        ref_audio_path = prepare_reference_audio(ref_audio_path)
 
         wav_output = output_path.with_suffix(".wav").resolve()
 
@@ -347,7 +703,6 @@ class Narrator:
                 ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(audio_path)],
                 capture_output=True, text=True, check=True,
             )
-            import json
             data = json.loads(result.stdout)
             for stream in data.get("streams", []):
                 if "duration" in stream:
@@ -403,7 +758,7 @@ def load_narrations_multilingual(
     Returns
     -------
     dict[str, str]
-        Mapping of sequence_id → narration text.
+        Mapping of sequence_id -> narration text.
     """
     import yaml
 

@@ -4,7 +4,9 @@ F5-TTS bridge script — runs inside the f5-tts conda env.
 Called as:
     python f5_tts_bridge.py --ref_audio REF.wav --ref_text "..." \
         --gen_text "..." --output_file OUT.wav [--speed 1.0] [--model F5TTS_v1_Base] \
-        [--remove_silence]
+        [--remove_silence] [--nfe_step 32] [--cfg_strength 2.0] \
+        [--sway_sampling_coef -1.0] [--cross_fade_duration 0.15] \
+        [--target_rms 0.1] [--seed -1] [--ckpt_file PATH] [--vocab_file PATH]
 
 This avoids importing the full infer_cli module (which has heavy
 module-level imports that can crash on some Windows setups) and uses
@@ -89,6 +91,23 @@ def main():
     parser.add_argument("--speed", type=float, default=1.0, help="Speech speed multiplier")
     parser.add_argument("--model", default="F5TTS_v1_Base", help="Model type")
     parser.add_argument("--remove_silence", action="store_true", help="Remove silence")
+    # Advanced inference parameters
+    parser.add_argument("--nfe_step", type=int, default=32,
+                        help="Number of inference steps (16=fast, 32=normal, 64=max quality)")
+    parser.add_argument("--cfg_strength", type=float, default=2.0,
+                        help="Classifier-free guidance strength")
+    parser.add_argument("--sway_sampling_coef", type=float, default=-1.0,
+                        help="Sway sampling coefficient")
+    parser.add_argument("--cross_fade_duration", type=float, default=0.15,
+                        help="Cross-fade duration between segments in seconds")
+    parser.add_argument("--target_rms", type=float, default=0.1,
+                        help="Target RMS volume for internal normalization")
+    parser.add_argument("--seed", type=int, default=-1,
+                        help="Random seed (-1 = random)")
+    parser.add_argument("--ckpt_file", type=str, default=None,
+                        help="Path to custom checkpoint (supports hf:// URIs)")
+    parser.add_argument("--vocab_file", type=str, default=None,
+                        help="Path to custom vocab file (supports hf:// URIs)")
     args = parser.parse_args()
 
     # Read text from files if provided (avoids Windows CLI encoding issues)
@@ -106,10 +125,35 @@ def main():
         print("ERROR: no gen_text provided (use --gen_text or --gen_text_file)", file=sys.stderr)
         sys.exit(1)
 
+    # Resolve hf:// URIs via cached_path if available
+    if args.ckpt_file and args.ckpt_file.startswith("hf://"):
+        try:
+            from cached_path import cached_path
+            args.ckpt_file = str(cached_path(args.ckpt_file))
+        except Exception:
+            pass  # fallback to raw path
+
+    if args.vocab_file and args.vocab_file.startswith("hf://"):
+        try:
+            from cached_path import cached_path
+            args.vocab_file = str(cached_path(args.vocab_file))
+        except Exception:
+            pass  # fallback to raw path
+
     from f5_tts.api import F5TTS
 
+    # Build constructor kwargs (only pass ckpt/vocab if provided)
+    model_kwargs: dict = {"model": args.model}
+    if args.ckpt_file:
+        model_kwargs["ckpt_file"] = args.ckpt_file
+    if args.vocab_file:
+        model_kwargs["vocab_file"] = args.vocab_file
+
     print(f"Loading F5-TTS model: {args.model}", flush=True)
-    tts = F5TTS(model=args.model)
+    tts = F5TTS(**model_kwargs)
+
+    # Seed: -1 means random (None), >= 0 means deterministic
+    effective_seed = args.seed if args.seed >= 0 else None
 
     print(f"Generating: {os.path.basename(args.output_file)}", flush=True)
     wav, sr, spec = tts.infer(
@@ -118,6 +162,12 @@ def main():
         gen_text=gen_text,
         file_wave=args.output_file,
         speed=args.speed,
+        nfe_step=args.nfe_step,
+        cfg_strength=args.cfg_strength,
+        sway_sampling_coef=args.sway_sampling_coef,
+        cross_fade_duration=args.cross_fade_duration,
+        target_rms=args.target_rms,
+        seed=effective_seed,
     )
 
     if args.remove_silence and os.path.exists(args.output_file):
