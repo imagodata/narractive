@@ -63,7 +63,7 @@ diagrams:
   font_family: Segoe UI
 
 narration:
-  engine: edge-tts             # edge-tts | elevenlabs | f5-tts
+  engine: edge-tts             # edge-tts | elevenlabs | f5-tts | xtts-v2 | kokoro
   voice: fr-FR-HenriNeural     # Microsoft Neural TTS voice
   output_dir: output/narration
   speed: +0%
@@ -74,6 +74,11 @@ narration:
   # f5_speed: 1.0
   # f5_conda_env: f5-tts
   # f5_remove_silence: false
+  # Kokoro TTS options (ultra-fast local TTS, no voice cloning):
+  # kokoro_lang: fr             # en, en-gb, fr, pt, pt-br, es, it, ja, zh, hi, ko
+  # kokoro_voice: ff_siwis      # Voice name (see kokoro_bridge.py for defaults)
+  # kokoro_speed: 1.0
+  # kokoro_conda_env:           # Optional: conda env name (omit to use current Python)
 
 capture:
   fps: 10

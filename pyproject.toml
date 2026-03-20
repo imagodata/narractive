@@ -39,6 +39,7 @@ windows = ["pywin32>=306"]
 png = ["playwright>=1.40"]
 elevenlabs = ["elevenlabs"]
 xtts = ["TTS>=0.22"]
+kokoro = ["kokoro", "soundfile"]
 all = [
     "obsws-python>=1.7.0",
     "pywin32>=306",

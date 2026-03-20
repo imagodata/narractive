@@ -3,8 +3,8 @@ Narrator — TTS Audio Generation
 =================================
 Generates narration audio files for each video sequence using either
 edge-tts (free, Microsoft voices), ElevenLabs (paid, higher quality),
-F5-TTS (open-source, zero-shot voice cloning), or XTTS v2 (Coqui TTS,
-multilingual voice cloning).
+F5-TTS (open-source, zero-shot voice cloning), XTTS v2 (Coqui TTS,
+multilingual voice cloning), or Kokoro (ultra-fast local TTS, no cloning).
 
 Optionally preprocesses text through :class:`TextPreprocessor` to improve
 TTS pronunciation of acronyms, numbers, and proper nouns.
@@ -27,6 +27,7 @@ import asyncio
 import json
 import logging
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -347,6 +348,12 @@ class Narrator:
         self.xtts_gpu: bool = config.get("xtts_gpu", True)
         self.xtts_conda_env: str = config.get("xtts_conda_env", "xtts")
 
+        # Kokoro TTS specific config
+        self.kokoro_voice: str = config.get("kokoro_voice", "")
+        self.kokoro_lang: str = config.get("kokoro_lang", "en")
+        self.kokoro_speed: float = config.get("kokoro_speed", 1.0)
+        self.kokoro_conda_env: str | None = config.get("kokoro_conda_env")
+
         # Loudness normalization (EBU R128)
         self.normalize_loudness: bool = config.get("normalize_loudness", False)
         self.target_lufs: float = config.get("target_lufs", -16.0)
@@ -407,10 +414,12 @@ class Narrator:
             result = self._generate_f5_tts(text, output_path)
         elif self.engine in ("xtts", "xtts-v2", "coqui"):
             result = self._generate_xtts(text, output_path)
+        elif self.engine == "kokoro":
+            result = self._generate_kokoro(text, output_path, lang=lang)
         else:
             raise ValueError(
                 f"Unknown TTS engine: {self.engine}. "
-                "Use 'edge-tts', 'elevenlabs', 'f5-tts', or 'xtts-v2'."
+                "Use 'edge-tts', 'elevenlabs', 'f5-tts', 'xtts-v2', or 'kokoro'."
             )
 
         # Post-process: EBU R128 loudness normalization (opt-in)
@@ -683,6 +692,92 @@ class Narrator:
 
         logger.info(
             "XTTS v2 generated: %s (%.1fs)",
+            output_path.name, self.get_narration_duration(output_path),
+        )
+        return output_path
+
+    def _generate_kokoro(self, text: str, output_path: Path, lang: str = "en") -> Path:
+        """Generate audio using Kokoro TTS (ultra-fast, local, no voice cloning)."""
+        wav_output = output_path.with_suffix(".wav").resolve()
+
+        bridge_script = Path(__file__).parent.parent / "bridges" / "kokoro_bridge.py"
+        if not bridge_script.exists():
+            raise FileNotFoundError(f"Kokoro bridge script not found: {bridge_script}")
+
+        # Use kokoro_lang from config, fallback to the lang parameter
+        kokoro_lang = self.kokoro_lang or lang
+
+        import tempfile
+
+        text_file = Path(tempfile.mktemp(suffix="_kokoro.txt"))
+        text_file.write_text(text, encoding="utf-8")
+
+        # Determine Python executable: conda env or current interpreter
+        if self.kokoro_conda_env:
+            conda_python = (
+                Path.home() / "miniconda3" / "envs" / self.kokoro_conda_env / "bin" / "python"
+            )
+            if not conda_python.exists():
+                # Try Windows path
+                conda_python = (
+                    Path.home()
+                    / "miniconda3"
+                    / "envs"
+                    / self.kokoro_conda_env
+                    / "python.exe"
+                )
+            if not conda_python.exists():
+                raise RuntimeError(
+                    f"Conda env Python not found for '{self.kokoro_conda_env}'.\n"
+                    f"Create the environment:\n"
+                    f"  conda create -n {self.kokoro_conda_env} python=3.11 -y\n"
+                    f"  conda activate {self.kokoro_conda_env}\n"
+                    "  pip install kokoro soundfile"
+                )
+            python_cmd = str(conda_python)
+        else:
+            python_cmd = sys.executable
+
+        cmd = [
+            python_cmd,
+            "-X", "utf8",
+            str(bridge_script),
+            "--text_file", str(text_file),
+            "--output_file", str(wav_output),
+            "--lang", kokoro_lang,
+            "--speed", str(self.kokoro_speed),
+        ]
+        if self.kokoro_voice:
+            cmd.extend(["--voice", self.kokoro_voice])
+
+        logger.info(
+            "Kokoro generating: %s (lang=%s, voice=%s)",
+            output_path.name, kokoro_lang, self.kokoro_voice or "default",
+        )
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"Kokoro timed out after 120s for: {output_path.name}")
+        finally:
+            text_file.unlink(missing_ok=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Kokoro failed (exit {result.returncode}):\n{result.stderr[:500]}"
+            )
+
+        if not wav_output.exists() or wav_output.stat().st_size == 0:
+            raise RuntimeError(f"Kokoro produced empty/missing file: {wav_output}")
+
+        if output_path.suffix.lower() == ".mp3":
+            self._wav_to_mp3(wav_output, output_path)
+            wav_output.unlink(missing_ok=True)
+        else:
+            output_path = wav_output
+
+        logger.info(
+            "Kokoro generated: %s (%.1fs)",
             output_path.name, self.get_narration_duration(output_path),
         )
         return output_path
