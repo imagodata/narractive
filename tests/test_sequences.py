@@ -1,4 +1,4 @@
-"""Tests for the Recorder Protocol and VideoSequence base classes."""
+"""Tests for VideoSequence, TimelineSequence, and Recorder Protocol."""
 from __future__ import annotations
 
 import time
@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from video_automation.sequences.base import Recorder, TimelineSequence, VideoSequence
+
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -75,8 +76,36 @@ class ConcreteSequence(VideoSequence):
         pass
 
 
+class TrackingSequence(VideoSequence):
+    """Tracks lifecycle calls in order."""
+    name = "Tracking"
+    sequence_id = "track"
+
+    def __init__(self):
+        super().__init__()
+        self.call_order = []
+
+    def setup(self, obs, app, config):
+        self.call_order.append("setup")
+
+    def execute(self, obs, app, config):
+        self.call_order.append("execute")
+
+    def teardown(self, obs, app, config):
+        self.call_order.append("teardown")
+
+
+class FailingSequence(VideoSequence):
+    """Execute raises an exception."""
+    name = "Failing"
+    sequence_id = "fail"
+
+    def execute(self, obs, app, config):
+        raise RuntimeError("execution failed")
+
+
 # ---------------------------------------------------------------------------
-# Tests
+# Tests: Recorder Protocol
 # ---------------------------------------------------------------------------
 
 
@@ -95,6 +124,23 @@ class TestRecorderProtocol:
             assert not r.recording
         assert not recorder.connected
 
+    def test_scene_switching(self):
+        recorder = FakeRecorder()
+        recorder.switch_scene("Custom")
+        assert recorder.get_current_scene() == "Custom"
+
+    def test_diagram_overlay_toggle(self):
+        recorder = FakeRecorder()
+        recorder.show_diagram_overlay(True)
+        assert recorder.get_current_scene() == "Diagram Overlay"
+        recorder.show_diagram_overlay(False)
+        assert recorder.get_current_scene() == "Main"
+
+
+# ---------------------------------------------------------------------------
+# Tests: VideoSequence
+# ---------------------------------------------------------------------------
+
 
 class TestVideoSequence:
     def setup_method(self):
@@ -111,10 +157,13 @@ class TestVideoSequence:
         assert seq.name == "Test Sequence"
         assert seq.sequence_id == "test_seq"
         assert seq.obs_scene == "Main"
+        assert seq.duration_estimate == 5.0
 
     def test_repr(self):
         seq = ConcreteSequence()
-        assert "Test Sequence" in repr(seq)
+        r = repr(seq)
+        assert "Test Sequence" in r
+        assert "5s" in r
 
     def test_setup_switches_scene(self):
         seq = ConcreteSequence()
@@ -122,14 +171,23 @@ class TestVideoSequence:
         assert self.obs.current_scene == "Main"
         self.app.focus_app.assert_called_once()
 
-    def test_run_calls_lifecycle(self):
+    def test_setup_handles_scene_switch_failure(self):
+        obs = MagicMock()
+        obs.switch_scene.side_effect = RuntimeError("scene error")
         seq = ConcreteSequence()
-        seq.setup = MagicMock()
-        seq.teardown = MagicMock()
-        seq.execute = MagicMock()
+        # Should not raise
+        seq.setup(obs, self.app, self.config)
+
+    def test_run_calls_lifecycle_in_order(self):
+        seq = TrackingSequence()
         seq.run(self.obs, self.app, self.config)
-        seq.setup.assert_called_once()
-        seq.execute.assert_called_once()
+        assert seq.call_order == ["setup", "execute", "teardown"]
+
+    def test_teardown_called_even_on_failure(self):
+        seq = FailingSequence()
+        seq.teardown = MagicMock()
+        with pytest.raises(RuntimeError):
+            seq.run(self.obs, self.app, self.config)
         seq.teardown.assert_called_once()
 
     def test_elapsed_time(self):
@@ -137,30 +195,16 @@ class TestVideoSequence:
         seq._start_time = time.time() - 5.0
         assert 4.9 <= seq.elapsed() <= 6.0
 
-    @patch("time.sleep")
-    def test_show_diagram(self, mock_sleep):
-        seq = ConcreteSequence()
-        seq.show_diagram(self.obs, "test_diagram", duration=3.0)
-        # Should switch to overlay then back
-        assert self.obs.current_scene == "Main"
-        mock_sleep.assert_called_once_with(3.0)
-
-    def test_edit_config_value_missing_region(self):
-        pytest.importorskip("pyautogui")
-        seq = ConcreteSequence()
-        result = seq.edit_config_value(self.app, self.config, "nonexistent", "value")
-        assert result is False
-
-    def test_elapsed_zero_before_run(self):
+    def test_elapsed_zero_before_start(self):
         seq = ConcreteSequence()
         assert seq.elapsed() == 0.0
 
     @patch("time.sleep")
-    def test_teardown_logs_elapsed(self, mock_sleep):
+    def test_show_diagram(self, mock_sleep):
         seq = ConcreteSequence()
-        seq._start_time = time.time()
-        seq.teardown(self.obs, self.app, self.config)
-        mock_sleep.assert_called_once_with(0.0)
+        seq.show_diagram(self.obs, "test_diagram", duration=3.0)
+        assert self.obs.current_scene == "Main"
+        mock_sleep.assert_called_once_with(3.0)
 
     @patch("time.sleep")
     def test_show_diagram_and_return(self, mock_sleep):
@@ -168,36 +212,51 @@ class TestVideoSequence:
         seq.show_diagram_and_return(self.obs, self.app, "diag1", duration=2.0)
         self.app.focus_panel.assert_called_once()
 
+    def test_edit_config_value_missing_region(self):
+        pyautogui = pytest.importorskip("pyautogui")
+        seq = ConcreteSequence()
+        result = seq.edit_config_value(self.app, self.config, "nonexistent", "value")
+        assert result is False
+
+    def test_timeline_result_initially_none(self):
+        seq = ConcreteSequence()
+        assert seq.timeline_result is None
+
+    def test_abstract_execute_not_instantiable(self):
+        with pytest.raises(TypeError):
+            VideoSequence()
+
+
+# ---------------------------------------------------------------------------
+# Tests: TimelineSequence
+# ---------------------------------------------------------------------------
+
 
 class TestTimelineSequence:
     def test_build_timeline_not_implemented(self):
-        class IncompleteSeq(TimelineSequence):
-            name = "Incomplete"
-            sequence_id = "inc"
-
-        seq = IncompleteSeq()
+        class BareTimeline(TimelineSequence):
+            name = "Bare"
+            sequence_id = "bare"
+        seq = BareTimeline()
         with pytest.raises(NotImplementedError):
             seq.build_timeline(MagicMock(), MagicMock(), {})
 
-    def test_timeline_sequence_is_video_sequence(self):
-        assert issubclass(TimelineSequence, VideoSequence)
-
     def test_play_audio_default_false(self):
-        class MySeq(TimelineSequence):
-            name = "Test"
-            sequence_id = "t"
+        class TS(TimelineSequence):
+            name = "TS"
+            sequence_id = "ts"
             def build_timeline(self, obs, app, config):
                 return []
+        assert TS.play_audio is False
 
-        seq = MySeq()
-        assert seq.play_audio is False
-
-    def test_timeline_result_initially_none(self):
-        class MySeq(TimelineSequence):
-            name = "Test"
-            sequence_id = "t"
+    def test_execute_with_empty_cues(self):
+        class EmptyTimeline(TimelineSequence):
+            name = "Empty"
+            sequence_id = "empty"
             def build_timeline(self, obs, app, config):
                 return []
-
-        seq = MySeq()
+        seq = EmptyTimeline()
+        config = {"narration": {"output_dir": "/tmp/test_narr"}}
+        # Should handle empty cues gracefully
+        seq.execute(MagicMock(), MagicMock(), config)
         assert seq.timeline_result is None

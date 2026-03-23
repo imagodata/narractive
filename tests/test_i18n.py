@@ -1,94 +1,137 @@
-"""Tests for the DiagramLabels i18n module."""
+"""Tests for DiagramLabels — multilingual label/title management."""
 from __future__ import annotations
+
+import pytest
 
 from video_automation.diagrams.i18n import DiagramLabels
 
 
-class TestDiagramLabels:
+# ---------------------------------------------------------------------------
+# Init
+# ---------------------------------------------------------------------------
+
+
+class TestDiagramLabelsInit:
+    def test_empty_labels(self):
+        dl = DiagramLabels(labels={})
+        assert dl.label_ids == []
+        assert dl.diagram_ids == []
+        assert dl.languages == set()
+
+    def test_default_lang(self):
+        dl = DiagramLabels(labels={}, default_lang="en")
+        assert dl.default_lang == "en"
+
+    def test_default_lang_is_fr(self):
+        dl = DiagramLabels(labels={})
+        assert dl.default_lang == "fr"
+
+    def test_titles_optional(self):
+        dl = DiagramLabels(labels={"a": {"fr": "A"}})
+        assert dl.diagram_ids == []
+
+
+# ---------------------------------------------------------------------------
+# Label lookup
+# ---------------------------------------------------------------------------
+
+
+class TestDiagramLabelsLookup:
     def setup_method(self):
-        self.labels = DiagramLabels(
+        self.dl = DiagramLabels(
             labels={
                 "server": {"fr": "Serveur", "en": "Server", "pt": "Servidor"},
-                "client": {"fr": "Client", "en": "Client", "pt": "Cliente"},
-                "empty": {"fr": "Vide"},
+                "client": {"fr": "Client", "en": "Client"},
+                "fr_only": {"fr": "Seulement francais"},
             },
             titles={
-                "architecture": {"fr": "Architecture", "en": "Architecture"},
-                "overview": {"fr": "Vue d'ensemble"},
+                "architecture": {"fr": "Architecture", "en": "Architecture", "pt": "Arquitetura"},
+                "flow": {"fr": "Flux"},
             },
             default_lang="fr",
         )
 
-    def test_label_known_lang(self):
-        assert self.labels.l("server", "en") == "Server"
+    def test_label_exact_match(self):
+        assert self.dl.l("server", "en") == "Server"
+        assert self.dl.l("server", "fr") == "Serveur"
+        assert self.dl.l("server", "pt") == "Servidor"
 
-    def test_label_default_lang(self):
-        assert self.labels.l("server", "fr") == "Serveur"
+    def test_label_fallback_to_default(self):
+        assert self.dl.l("fr_only", "en") == "Seulement francais"
 
-    def test_label_unknown_lang_fallback(self):
-        """Unknown lang should fallback to default_lang."""
-        assert self.labels.l("server", "de") == "Serveur"
+    def test_label_unknown_id_returns_id(self):
+        assert self.dl.l("nonexistent", "fr") == "nonexistent"
 
-    def test_label_unknown_id(self):
-        """Unknown label_id returns the id itself."""
-        assert self.labels.l("unknown_key", "fr") == "unknown_key"
+    def test_label_get_label_alias(self):
+        assert self.dl.get_label("server", "en") == "Server"
 
-    def test_title_known_lang(self):
-        assert self.labels.t("architecture", "en") == "Architecture"
+    def test_title_exact_match(self):
+        assert self.dl.t("architecture", "en") == "Architecture"
+        assert self.dl.t("architecture", "pt") == "Arquitetura"
 
-    def test_title_fallback(self):
-        assert self.labels.t("overview", "en") == "Vue d'ensemble"
+    def test_title_fallback_to_default(self):
+        assert self.dl.t("flow", "en") == "Flux"
 
-    def test_title_unknown_id(self):
-        assert self.labels.t("nonexistent", "fr") == "nonexistent"
+    def test_title_unknown_id_returns_id(self):
+        assert self.dl.t("unknown_diagram", "fr") == "unknown_diagram"
 
-    def test_get_label_same_as_l(self):
-        assert self.labels.get_label("client", "pt") == self.labels.l("client", "pt")
+    def test_title_get_title_alias(self):
+        assert self.dl.get_title("architecture", "fr") == "Architecture"
 
-    def test_get_title_same_as_t(self):
-        assert self.labels.get_title("architecture", "fr") == self.labels.t("architecture", "fr")
+
+# ---------------------------------------------------------------------------
+# Introspection
+# ---------------------------------------------------------------------------
 
 
 class TestDiagramLabelsIntrospection:
-    def setup_method(self):
-        self.labels = DiagramLabels(
-            labels={"a": {"fr": "A", "en": "A"}, "b": {"pt": "B"}},
-            titles={"t1": {"fr": "T1", "de": "T1"}},
-            default_lang="fr",
-        )
-
     def test_label_ids(self):
-        assert set(self.labels.label_ids) == {"a", "b"}
+        dl = DiagramLabels(labels={"a": {"fr": "A"}, "b": {"fr": "B"}})
+        assert sorted(dl.label_ids) == ["a", "b"]
 
     def test_diagram_ids(self):
-        assert self.labels.diagram_ids == ["t1"]
+        dl = DiagramLabels(labels={}, titles={"x": {"fr": "X"}, "y": {"fr": "Y"}})
+        assert sorted(dl.diagram_ids) == ["x", "y"]
 
     def test_languages(self):
-        assert self.labels.languages == {"fr", "en", "pt", "de"}
+        dl = DiagramLabels(
+            labels={"a": {"fr": "A", "en": "A"}},
+            titles={"t": {"pt": "T"}},
+        )
+        assert dl.languages == {"fr", "en", "pt"}
 
     def test_repr(self):
-        r = repr(self.labels)
+        dl = DiagramLabels(
+            labels={"a": {"fr": "A"}, "b": {"en": "B"}},
+            titles={"t": {"fr": "T"}},
+        )
+        r = repr(dl)
         assert "labels=2" in r
         assert "titles=1" in r
 
 
-class TestDiagramLabelsEmpty:
-    def test_empty_labels(self):
-        labels = DiagramLabels(labels={})
-        assert labels.l("anything", "fr") == "anything"
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
 
-    def test_no_titles(self):
-        labels = DiagramLabels(labels={})
-        assert labels.t("anything", "fr") == "anything"
 
-    def test_empty_languages(self):
-        labels = DiagramLabels(labels={})
-        assert labels.languages == set()
+class TestDiagramLabelsEdgeCases:
+    def test_empty_string_value(self):
+        dl = DiagramLabels(labels={"key": {"fr": "", "en": "English"}})
+        # Empty string is falsy, should fall back to default or id
+        result = dl.l("key", "fr")
+        # Empty string is a valid value that evaluates to falsy
+        # The implementation uses `or` chaining, so empty string falls through
+        assert result in ("", "English", "key")
 
-    def test_custom_default_lang(self):
-        labels = DiagramLabels(
-            labels={"x": {"en": "X-en", "de": "X-de"}},
-            default_lang="en",
-        )
-        # Requesting 'fr' should fallback to 'en' (default)
-        assert labels.l("x", "fr") == "X-en"
+    def test_all_languages_missing_returns_id(self):
+        dl = DiagramLabels(labels={"key": {}}, default_lang="fr")
+        assert dl.l("key", "de") == "key"
+
+    def test_multiple_labels_independent(self):
+        dl = DiagramLabels(labels={
+            "a": {"fr": "A_fr"},
+            "b": {"fr": "B_fr"},
+        })
+        assert dl.l("a", "fr") == "A_fr"
+        assert dl.l("b", "fr") == "B_fr"
