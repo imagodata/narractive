@@ -41,3 +41,27 @@ Result: Sprint 1 est implémenté et la PR est ouverte : **https://github.com/im
 **Issue #2 — Unit tests for core modules**
 - Ajout de `test_text_preprocessor.py`, `test_subtitles.py`, `test_i18n.py`
 - **92 tests passent**, 2 skip
+
+
+## [2026-03-23 14:20]
+Delegate task: narractive fermer les issues complétées
+Result: Issues #1 et #2 (Sprint 1) sont déjà fermés. Les issues 3 à 14 sont encore ouvertes — ce sont les sprints 2 à 5, qui n'ont pas encore été implémentés.
+
+Tu veux fermer des issues spécifiques ? Ou tu confirmes que seul le Sprint 1 est terminé pour l'instant ?
+
+*(pas de changements de fichiers)*
+
+
+## [2026-03-23 14:32]
+Delegate task: narractive lance sprint 2
+Result: Sprint 2 est implémenté. PR ouverte : **https://github.com/imagodata/narractive/pull/17**
+
+## Ce qui a été fait
+
+**Issue #3 — `narractive init`**
+- Nouvelle commande `narractive init <dir>` qui scaffold un projet complet
+- Mode interactif (prompts: nom, fenêtre app, moteur TTS, langues, backend)
+- Flag `--no-interactive` pour usage CI
+- Crée: `config.yaml`, `sequences/__init__.py`, `sequences/seq00_intro.py`, `narrations/<lang>.yaml`, `diagrams/definitions.py`
+
+**Issue #4 — Config schema validat
