@@ -151,3 +151,54 @@ class TestVideoSequence:
         seq = ConcreteSequence()
         result = seq.edit_config_value(self.app, self.config, "nonexistent", "value")
         assert result is False
+
+    def test_elapsed_zero_before_run(self):
+        seq = ConcreteSequence()
+        assert seq.elapsed() == 0.0
+
+    @patch("time.sleep")
+    def test_teardown_logs_elapsed(self, mock_sleep):
+        seq = ConcreteSequence()
+        seq._start_time = time.time()
+        seq.teardown(self.obs, self.app, self.config)
+        mock_sleep.assert_called_once_with(0.0)
+
+    @patch("time.sleep")
+    def test_show_diagram_and_return(self, mock_sleep):
+        seq = ConcreteSequence()
+        seq.show_diagram_and_return(self.obs, self.app, "diag1", duration=2.0)
+        self.app.focus_panel.assert_called_once()
+
+
+class TestTimelineSequence:
+    def test_build_timeline_not_implemented(self):
+        class IncompleteSeq(TimelineSequence):
+            name = "Incomplete"
+            sequence_id = "inc"
+
+        seq = IncompleteSeq()
+        with pytest.raises(NotImplementedError):
+            seq.build_timeline(MagicMock(), MagicMock(), {})
+
+    def test_timeline_sequence_is_video_sequence(self):
+        assert issubclass(TimelineSequence, VideoSequence)
+
+    def test_play_audio_default_false(self):
+        class MySeq(TimelineSequence):
+            name = "Test"
+            sequence_id = "t"
+            def build_timeline(self, obs, app, config):
+                return []
+
+        seq = MySeq()
+        assert seq.play_audio is False
+
+    def test_timeline_result_initially_none(self):
+        class MySeq(TimelineSequence):
+            name = "Test"
+            sequence_id = "t"
+            def build_timeline(self, obs, app, config):
+                return []
+
+        seq = MySeq()
+        assert seq.timeline_result is None
