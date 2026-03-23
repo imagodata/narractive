@@ -34,6 +34,8 @@ from pathlib import Path
 from typing import Optional
 
 from video_automation.core.text_preprocessor import TextPreprocessor
+# Re-export for convenience: `from video_automation.core.narrator import register_tts_engine`
+from video_automation.core.tts_base import register_tts_engine as register_tts_engine  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -539,10 +541,15 @@ class Narrator:
         elif self.engine == "openai":
             result = self._generate_openai(text, output_path)
         else:
-            raise ValueError(
-                f"Unknown TTS engine: {self.engine}. "
-                "Use 'edge-tts', 'elevenlabs', 'f5-tts', 'xtts-v2', 'kokoro', or 'openai'."
-            )
+            # Try the plugin registry before giving up
+            result = self._generate_plugin(text, output_path, lang=lang)
+            if result is None:
+                raise ValueError(
+                    f"Unknown TTS engine: {self.engine!r}. "
+                    "Built-in engines: edge-tts, elevenlabs, f5-tts, xtts-v2, kokoro, openai. "
+                    "Register a custom engine with register_tts_engine() or via the "
+                    "'narractive.tts' entry-point group."
+                )
 
         # Post-process: EBU R128 loudness normalization (opt-in)
         if self.normalize_loudness:
@@ -1002,6 +1009,28 @@ class Narrator:
             out_path.name, self.get_narration_duration(out_path),
         )
         return out_path
+
+    def _generate_plugin(
+        self, text: str, output_path: Path, lang: str = "fr"
+    ) -> "Path | None":
+        """
+        Attempt to generate audio using a registered :class:`~video_automation.core.tts_base.TTSEngine` plugin.
+
+        Returns the output :class:`Path` on success, or ``None`` when no plugin
+        is registered for ``self.engine``.
+        """
+        from video_automation.core.tts_base import get_tts_engine, load_entry_point_plugins
+
+        # Ensure entry-point plugins are loaded (idempotent)
+        load_entry_point_plugins()
+
+        engine_cls = get_tts_engine(self.engine)
+        if engine_cls is None:
+            return None
+
+        engine_instance = engine_cls()
+        logger.info("Using plugin TTS engine '%s': %s", self.engine, engine_cls.__name__)
+        return engine_instance.generate(text, output_path, lang=lang)
 
     @staticmethod
     def _wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
