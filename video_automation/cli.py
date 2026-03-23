@@ -62,6 +62,12 @@ def load_config(config_path: Path) -> dict:
     with open(config_path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     logger.debug("Config loaded from %s", config_path)
+    try:
+        from video_automation.config_schema import validate_config_and_warn
+
+        validate_config_and_warn(cfg)
+    except ImportError:
+        pass
     return cfg
 
 
@@ -156,6 +162,10 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
     """Narractive — orchestrates App + OBS/FrameCapture + TTS + FFmpeg."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # Subcommands that don't need a pre-existing config.yaml
+    if ctx.invoked_subcommand in ("init", "validate-config"):
+        return
 
     # Find config
     if config is None:
@@ -621,3 +631,199 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# ── `narractive init` ──────────────────────────────────────────────────────
+
+
+@cli.command("init")
+@click.argument("project_dir", default=".", type=click.Path())
+@click.option(
+    "--no-interactive", "no_interactive", is_flag=True, help="Skip all prompts and use defaults."
+)
+def cmd_init(project_dir: str, no_interactive: bool) -> None:
+    """Scaffold a new Narractive project directory."""
+    from video_automation.scripts.init_project import scaffold_project
+
+    project_path = Path(project_dir).resolve()
+    dir_name = project_path.name or "my_project"
+
+    if no_interactive:
+        display_name = dir_name
+        app_window = dir_name
+        tts_engine = "edge-tts"
+        languages = ["fr"]
+        recording_backend = "obs"
+    else:
+        display_name = click.prompt("Project display name", default=dir_name)
+        app_window = click.prompt("App window title (substring to match)", default=display_name)
+        tts_engine = click.prompt(
+            "TTS engine",
+            type=click.Choice(["edge-tts", "elevenlabs", "kokoro", "f5-tts"]),
+            default="edge-tts",
+        )
+        lang_input = click.prompt("Languages (comma-separated, e.g. fr,en)", default="fr")
+        languages = [lang_code.strip() for lang_code in lang_input.split(",") if lang_code.strip()]
+        recording_backend = click.prompt(
+            "Recording backend",
+            type=click.Choice(["obs", "headless"]),
+            default="obs",
+        )
+
+    click.echo(f"\nScaffolding project in {project_path}...")
+    next_steps = scaffold_project(
+        project_dir=project_path,
+        project_name=dir_name,
+        app_window=app_window,
+        tts_engine=tts_engine,
+        languages=languages,
+        recording_backend=recording_backend,
+        display_name=display_name,
+    )
+    click.echo(next_steps)
+
+
+# ── `narractive validate-config` ──────────────────────────────────────────
+
+
+@cli.command("validate-config")
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default="config.yaml",
+    show_default=True,
+    help="Path to config.yaml to validate.",
+)
+def cmd_validate_config(config_path: str) -> None:
+    """Validate config.yaml against the Narractive schema."""
+    from video_automation.config_schema import is_pydantic_available, validate_config
+
+    if not is_pydantic_available():
+        click.echo("pydantic is not installed. Install with:\n  pip install 'narractive[config]'")
+        return
+
+    raw = load_config(Path(config_path))
+    cfg = validate_config(raw)
+    click.echo(f"  ok Config is valid: {config_path}")
+    click.echo(f"     narration engine : {cfg.narration.engine}")
+    langs = list(cfg.languages.keys()) if cfg.languages else []
+    click.echo(f"     languages        : {langs or '(none)'}")
+
+
+# ── `narractive preview` ──────────────────────────────────────────────────
+
+
+@cli.command("preview")
+@click.option(
+    "--sequence",
+    "-s",
+    "sequence_id",
+    type=str,
+    default=None,
+    metavar="SEQ",
+    help="Sequence ID to preview (e.g. seq01).",
+)
+@click.option("--all", "preview_all", is_flag=True, help="Preview all sequences.")
+@click.option("--lang", type=str, default="fr", show_default=True, help="Language code.")
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default="config.yaml",
+    show_default=True,
+    help="Path to config.yaml.",
+)
+@click.option("--no-play", "no_play", is_flag=True, help="Print audio path without playing.")
+def cmd_preview(
+    sequence_id: str | None,
+    preview_all: bool,
+    lang: str,
+    config_path: str,
+    no_play: bool,
+) -> None:
+    """Preview narration audio for one or all sequences."""
+    import time as _time
+
+    from video_automation.core.narrator import Narrator, load_narrations_multilingual
+
+    cfg = load_config(Path(config_path))
+    narr_cfg = cfg.get("narration", {})
+    narrator = Narrator(narr_cfg)
+
+    narr_dir = Path("narrations")
+    if not narr_dir.exists():
+        click.echo(f"Narrations directory not found: {narr_dir}")
+        sys.exit(1)
+
+    narrations = load_narrations_multilingual(narr_dir, lang)
+    if not narrations:
+        click.echo(f"No narrations found for lang={lang} in {narr_dir}")
+        sys.exit(1)
+
+    out_dir = Path(narr_cfg.get("output_dir", "output/narration")) / lang
+
+    if sequence_id and not preview_all:
+        items = [(sequence_id, narrations.get(sequence_id, ""))]
+        if not narrations.get(sequence_id):
+            click.echo(f"Sequence '{sequence_id}' not found in {narr_dir}/{lang}.yaml")
+            sys.exit(1)
+    else:
+        items = list(narrations.items())
+
+    for seq_id, text in items:
+        if not text:
+            continue
+
+        audio_path = out_dir / f"{seq_id}_narration.mp3"
+
+        # Generate if not cached
+        if not audio_path.exists():
+            click.echo(f"  Generating {seq_id}...")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                audio_path = narrator.generate_narration(text, audio_path)
+            except Exception as exc:
+                click.echo(f"  !! TTS failed for {seq_id}: {exc}")
+                continue
+
+        # Estimate duration
+        try:
+            duration = narrator.get_narration_duration(audio_path)
+        except Exception:
+            duration = 0.0
+
+        preview_text = text[:80].replace("\n", " ")
+        click.echo(f"\n  [{seq_id}] ~{duration:.1f}s\n  {preview_text!r}\n  {audio_path}")
+
+        if no_play:
+            continue
+
+        # Playback: try ffplay first, fall back to playsound
+        _play_audio(audio_path)
+
+        if preview_all and len(items) > 1:
+            _time.sleep(0.5)
+
+
+def _play_audio(audio_path: Path) -> None:
+    """Play an audio file using ffplay or playsound."""
+    import subprocess as sp
+
+    try:
+        sp.run(
+            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(audio_path)],
+            timeout=120,
+            check=False,
+        )
+    except FileNotFoundError:
+        # ffplay not available, try playsound
+        try:
+            import playsound  # type: ignore
+
+            playsound.playsound(str(audio_path))
+        except ImportError:
+            click.echo("  (install ffplay or playsound to play audio)")
+    except Exception as exc:
+        click.echo(f"  !! Playback error: {exc}")
