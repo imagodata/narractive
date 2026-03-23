@@ -24,10 +24,12 @@ Usage::
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -298,6 +300,113 @@ def postprocess_audio(
         return audio_path
 
 
+class NarrationCache:
+    """
+    Content-addressed cache for narration audio files.
+
+    Stores a JSON sidecar file (``.narration-cache.json``) alongside the
+    generated audio.  Each entry records the SHA-256 hash of the generation
+    inputs (text + engine + voice + lang + speed) so that unchanged sequences
+    are skipped on subsequent runs.
+
+    Parameters
+    ----------
+    cache_path : Path
+        Path to the ``.narration-cache.json`` file.
+    """
+
+    CACHE_FILENAME = ".narration-cache.json"
+
+    def __init__(self, cache_path: Path) -> None:
+        self._path = cache_path
+        self._data: dict[str, dict] = {}
+        self._load()
+
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
+
+    def _load(self) -> None:
+        if self._path.exists():
+            try:
+                with open(self._path, encoding="utf-8") as f:
+                    self._data = json.load(f)
+            except (json.JSONDecodeError, OSError) as exc:
+                logger.warning("Failed to load narration cache (%s): %s", self._path, exc)
+                self._data = {}
+
+    def save(self) -> None:
+        """Persist the cache to disk."""
+        try:
+            with open(self._path, "w", encoding="utf-8") as f:
+                json.dump(self._data, f, indent=2, ensure_ascii=False)
+        except OSError as exc:
+            logger.warning("Failed to save narration cache: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Hash computation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def compute_hash(text: str, engine: str, voice: str, lang: str, speed: str | float) -> str:
+        """Return a SHA-256 hex digest of the generation inputs."""
+        payload = f"{text}\x00{engine}\x00{voice}\x00{lang}\x00{speed}"
+        return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    # ------------------------------------------------------------------
+    # Cache operations
+    # ------------------------------------------------------------------
+
+    def is_cached(
+        self,
+        seq_id: str,
+        text: str,
+        engine: str,
+        voice: str,
+        lang: str,
+        speed: str | float,
+        audio_path: Path,
+    ) -> bool:
+        """Return True if the cached entry matches and the audio file exists."""
+        entry = self._data.get(seq_id)
+        if not entry:
+            return False
+        expected_hash = self.compute_hash(text, engine, voice, lang, speed)
+        return (
+            entry.get("hash") == expected_hash
+            and audio_path.exists()
+            and audio_path.stat().st_size > 0
+        )
+
+    def update(
+        self,
+        seq_id: str,
+        text: str,
+        engine: str,
+        voice: str,
+        lang: str,
+        speed: str | float,
+    ) -> None:
+        """Record a successful generation in the cache."""
+        self._data[seq_id] = {
+            "hash": self.compute_hash(text, engine, voice, lang, speed),
+            "engine": engine,
+            "voice": voice,
+            "lang": lang,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    # ------------------------------------------------------------------
+    # Factory
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def for_output_dir(cls, output_dir: Path) -> "NarrationCache":
+        """Return a :class:`NarrationCache` whose file lives in *output_dir*."""
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return cls(output_dir / cls.CACHE_FILENAME)
+
+
 class Narrator:
     """
     Generates TTS narration audio.
@@ -353,6 +462,17 @@ class Narrator:
         self.kokoro_lang: str = config.get("kokoro_lang", "en")
         self.kokoro_speed: float = config.get("kokoro_speed", 1.0)
         self.kokoro_conda_env: str | None = config.get("kokoro_conda_env")
+        # Kokoro voice mixing
+        self.kokoro_voices: list[dict] = config.get("kokoro", {}).get("voices", [])
+        self.kokoro_voice_file: str | None = config.get("kokoro", {}).get("voice_file")
+
+        # OpenAI TTS specific config
+        _openai_cfg: dict = config.get("openai", {})
+        self.openai_api_key: str | None = _openai_cfg.get("api_key")
+        self.openai_model: str = _openai_cfg.get("model", "tts-1-hd")
+        self.openai_voice: str = _openai_cfg.get("voice", "alloy")
+        self.openai_speed: float = float(_openai_cfg.get("speed", 1.0))
+        self.openai_format: str = _openai_cfg.get("format", "mp3")
 
         # Loudness normalization (EBU R128)
         self.normalize_loudness: bool = config.get("normalize_loudness", False)
@@ -416,10 +536,12 @@ class Narrator:
             result = self._generate_xtts(text, output_path)
         elif self.engine == "kokoro":
             result = self._generate_kokoro(text, output_path, lang=lang)
+        elif self.engine == "openai":
+            result = self._generate_openai(text, output_path)
         else:
             raise ValueError(
                 f"Unknown TTS engine: {self.engine}. "
-                "Use 'edge-tts', 'elevenlabs', 'f5-tts', 'xtts-v2', or 'kokoro'."
+                "Use 'edge-tts', 'elevenlabs', 'f5-tts', 'xtts-v2', 'kokoro', or 'openai'."
             )
 
         # Post-process: EBU R128 loudness normalization (opt-in)
@@ -437,18 +559,51 @@ class Narrator:
         script_dict: dict[str, str],
         output_dir: Optional[str | Path] = None,
         lang: str = "fr",
+        force: bool = False,
     ) -> dict[str, Path]:
-        """Batch-generate narration audio for all sequences."""
+        """
+        Batch-generate narration audio for all sequences.
+
+        Skips generation when a matching cache entry exists and the audio file
+        is present (content-addressed cache keyed on text + engine + voice +
+        lang + speed).  Pass ``force=True`` to bypass the cache entirely.
+
+        Parameters
+        ----------
+        script_dict : dict[str, str]
+            Mapping of sequence_id -> narration text.
+        output_dir : str | Path | None
+            Output directory.  Falls back to ``self.output_dir``.
+        lang : str
+            Language code.
+        force : bool
+            When ``True``, regenerate all files regardless of cache state.
+        """
         out_dir = Path(output_dir) if output_dir else self.output_dir
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        cache = NarrationCache.for_output_dir(out_dir)
         results: dict[str, Path] = {}
+
         for seq_id, text in script_dict.items():
             output_path = out_dir / f"{seq_id}_narration.mp3"
-            logger.info("Generating narration for %s...", seq_id)
+            effective_voice = self.voice
+
+            if not force and cache.is_cached(
+                seq_id, text, self.engine, effective_voice, lang, self.speed, output_path
+            ):
+                logger.info("[CACHED] %s — skipping TTS generation", seq_id)
+                results[seq_id] = output_path
+                continue
+
+            logger.info("[GENERATING] %s...", seq_id)
             try:
                 results[seq_id] = self.generate_narration(text, output_path, lang=lang)
+                cache.update(seq_id, text, self.engine, effective_voice, lang, self.speed)
             except Exception as exc:  # noqa: BLE001
                 logger.error("Failed to generate narration for %s: %s", seq_id, exc)
+
+        cache.save()
         return results
 
     def get_narration_duration(self, audio_path: str | Path) -> float:
@@ -747,7 +902,14 @@ class Narrator:
             "--lang", kokoro_lang,
             "--speed", str(self.kokoro_speed),
         ]
-        if self.kokoro_voice:
+
+        # Voice selection priority: voice_file > voices (mixing) > voice > default
+        if self.kokoro_voice_file:
+            cmd.extend(["--voice_file", self.kokoro_voice_file])
+        elif self.kokoro_voices:
+            import json as _json
+            cmd.extend(["--voices", _json.dumps(self.kokoro_voices)])
+        elif self.kokoro_voice:
             cmd.extend(["--voice", self.kokoro_voice])
 
         logger.info(
@@ -781,6 +943,65 @@ class Narrator:
             output_path.name, self.get_narration_duration(output_path),
         )
         return output_path
+
+    def _generate_openai(self, text: str, output_path: Path) -> Path:
+        """Generate audio using OpenAI TTS API (tts-1 / tts-1-hd)."""
+        import os
+
+        try:
+            import openai  # type: ignore
+        except ImportError:
+            raise ImportError(
+                "openai not installed. Run: pip install 'narractive[openai]'"
+            )
+
+        api_key = self.openai_api_key or os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise EnvironmentError(
+                "OpenAI API key not found. Set OPENAI_API_KEY environment variable "
+                "or add 'api_key' under the 'openai' section in your config."
+            )
+
+        _valid_voices = {"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
+        voice = self.openai_voice if self.openai_voice in _valid_voices else "alloy"
+        if self.openai_voice not in _valid_voices:
+            logger.warning(
+                "Invalid OpenAI voice '%s'. Valid voices: %s. Falling back to 'alloy'.",
+                self.openai_voice,
+                ", ".join(sorted(_valid_voices)),
+            )
+
+        _valid_models = {"tts-1", "tts-1-hd"}
+        model = self.openai_model if self.openai_model in _valid_models else "tts-1-hd"
+
+        logger.info(
+            "OpenAI TTS generating: %s (model=%s, voice=%s, format=%s)",
+            output_path.name, model, voice, self.openai_format,
+        )
+
+        client = openai.OpenAI(api_key=api_key)
+        response = client.audio.speech.create(
+            model=model,
+            voice=voice,  # type: ignore[arg-type]
+            input=text,
+            response_format=self.openai_format,  # type: ignore[arg-type]
+            speed=self.openai_speed,
+        )
+
+        # Stream directly to file
+        out_path = output_path.with_suffix(f".{self.openai_format}")
+        with open(out_path, "wb") as f:
+            for chunk in response.iter_bytes(chunk_size=4096):
+                f.write(chunk)
+
+        if not out_path.exists() or out_path.stat().st_size == 0:
+            raise RuntimeError(f"OpenAI TTS produced empty/missing file: {out_path}")
+
+        logger.info(
+            "OpenAI TTS generated: %s (%.1fs)",
+            out_path.name, self.get_narration_duration(out_path),
+        )
+        return out_path
 
     @staticmethod
     def _wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
