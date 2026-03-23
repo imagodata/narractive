@@ -1,5 +1,7 @@
 # Narractive
 
+[![CI](https://github.com/imagodata/narractive/actions/workflows/ci.yml/badge.svg)](https://github.com/imagodata/narractive/actions/workflows/ci.yml)
+
 A modular Python framework for automated video production — from narration to final cut.
 
 Narractive orchestrates the full pipeline: UI interaction (PyAutoGUI), screen recording (OBS or headless), text-to-speech narration, Mermaid diagram generation, subtitle generation, and FFmpeg assembly. Script your sequences, define narration cues, and let the framework produce polished demo videos hands-free.
