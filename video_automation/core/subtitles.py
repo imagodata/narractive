@@ -89,6 +89,27 @@ def format_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
+def format_vtt_timestamp(seconds: float) -> str:
+    """
+    Convert seconds to a WebVTT timestamp string.
+
+    Parameters
+    ----------
+    seconds : float
+        Time in seconds.
+
+    Returns
+    -------
+    str
+        Formatted as ``HH:MM:SS.mmm`` (WebVTT uses a dot, not a comma).
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int(round((seconds - int(seconds)) * 1000))
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
+
+
 def estimate_duration(text: str, wpm: int) -> float:
     """
     Estimate the TTS reading duration of *text*.
@@ -230,6 +251,76 @@ def generate_srt(
 
 
 # ---------------------------------------------------------------------------
+# WebVTT generation
+# ---------------------------------------------------------------------------
+
+
+def generate_vtt(
+    narration_text: str,
+    wpm: int,
+    max_chars_per_line: int = 42,
+    max_lines: int = 2,
+    start_margin: float = START_MARGIN,
+    paragraph_pause: float = PARAGRAPH_PAUSE,
+    segment_pause: float = SEGMENT_PAUSE,
+) -> str:
+    """
+    Generate complete WebVTT content from a narration text.
+
+    Uses the same timing algorithm as :func:`generate_srt` but produces
+    WebVTT format (``WEBVTT`` header, dot-separated milliseconds).
+
+    Parameters
+    ----------
+    narration_text : str
+        Full narration text for one sequence.
+    wpm : int
+        Words per minute rate.
+    max_chars_per_line : int
+        Maximum characters per subtitle line.
+    max_lines : int
+        Maximum lines per subtitle block.
+    start_margin : float
+        Seconds before the first cue.
+    paragraph_pause : float
+        Extra pause between paragraphs (seconds).
+    segment_pause : float
+        Pause between cues within a paragraph (seconds).
+
+    Returns
+    -------
+    str
+        Complete WebVTT file content (starts with ``WEBVTT\\n\\n``).
+    """
+    paragraphs = re.split(r"\n\s*\n", narration_text.strip())
+    paragraphs = [p.strip() for p in paragraphs if p.strip()]
+
+    vtt_cues: list[str] = []
+    current_time = start_margin
+
+    for para_idx, paragraph in enumerate(paragraphs):
+        paragraph_clean = " ".join(paragraph.split())
+        blocks = split_into_subtitle_blocks(
+            paragraph_clean,
+            max_chars_per_line=max_chars_per_line,
+            max_lines=max_lines,
+        )
+
+        for block in blocks:
+            duration = estimate_duration(block, wpm)
+            start_ts = format_vtt_timestamp(current_time)
+            end_ts = format_vtt_timestamp(current_time + duration)
+            vtt_cues.append(f"{start_ts} --> {end_ts}\n{block}\n")
+            current_time += duration + segment_pause
+
+        if para_idx < len(paragraphs) - 1:
+            current_time += paragraph_pause - segment_pause
+
+    header = "WEBVTT\n\n"
+    return header + "\n".join(vtt_cues)
+
+
+# ---------------------------------------------------------------------------
 # High-level class
 # ---------------------------------------------------------------------------
 
@@ -264,9 +355,10 @@ class SubtitleGenerator:
         output_path: str | Path,
         lang: str = "fr",
         wpm: Optional[int] = None,
+        generate_webvtt: bool = False,
     ) -> Path:
         """
-        Generate an SRT file for a single sequence.
+        Generate an SRT file (and optionally a WebVTT file) for a single sequence.
 
         Parameters
         ----------
@@ -280,6 +372,8 @@ class SubtitleGenerator:
             Language code (used for WPM default lookup).
         wpm : int, optional
             Override the default WPM for this language.
+        generate_webvtt : bool
+            If True, also write a ``.vtt`` file alongside the ``.srt``.
 
         Returns
         -------
@@ -299,6 +393,17 @@ class SubtitleGenerator:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(srt_content, encoding="utf-8")
 
+        if generate_webvtt:
+            vtt_path = output_path.with_suffix(".vtt")
+            vtt_content = generate_vtt(
+                narration_text,
+                wpm=effective_wpm,
+                max_chars_per_line=self.max_chars,
+                max_lines=self.max_lines,
+            )
+            vtt_path.write_text(vtt_content, encoding="utf-8")
+            logger.info("Generated WebVTT: %s", vtt_path.name)
+
         words = count_words(narration_text)
         est = estimate_duration(narration_text.replace("\n", " "), effective_wpm)
         logger.info(
@@ -313,20 +418,23 @@ class SubtitleGenerator:
         output_dir: str | Path,
         lang: str = "fr",
         wpm: Optional[int] = None,
+        generate_webvtt: bool = False,
     ) -> dict[str, Path]:
         """
-        Batch-generate SRT files for all sequences of a language.
+        Batch-generate SRT files (and optionally WebVTT files) for all sequences.
 
         Parameters
         ----------
         narrations : dict[str, str]
             Mapping of sequence_id → narration text.
         output_dir : str | Path
-            Directory where SRT files are written.
+            Directory where subtitle files are written.
         lang : str
             Language code.
         wpm : int, optional
             Override WPM.
+        generate_webvtt : bool
+            If True, also write ``.vtt`` files alongside each ``.srt``.
 
         Returns
         -------
@@ -342,7 +450,10 @@ class SubtitleGenerator:
                 continue
 
             output_path = output_dir / f"{seq_id}.srt"
-            self.generate_for_sequence(seq_id, text, output_path, lang=lang, wpm=wpm)
+            self.generate_for_sequence(
+                seq_id, text, output_path, lang=lang, wpm=wpm,
+                generate_webvtt=generate_webvtt,
+            )
             results[seq_id] = output_path
 
         logger.info(
