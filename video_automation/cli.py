@@ -54,6 +54,7 @@ logger = logging.getLogger("video_automation")
 
 # ── Config loader ──────────────────────────────────────────────────────────
 
+
 def load_config(config_path: Path) -> dict:
     """Load and return config.yaml as a dict."""
     if not config_path.exists():
@@ -66,6 +67,7 @@ def load_config(config_path: Path) -> dict:
 
 
 # ── Sequence loader ───────────────────────────────────────────────────────
+
 
 def load_sequences_from_package(package_path: str) -> list:
     """
@@ -113,46 +115,112 @@ def load_sequences_from_package(package_path: str) -> list:
 
 # ── CLI entry point ────────────────────────────────────────────────────────
 
+
 @click.group(invoke_without_command=True)
-@click.option("--config", type=click.Path(exists=True, dir_okay=False), default=None,
-              help="Path to config.yaml")
+@click.option(
+    "--config",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Path to config.yaml",
+)
 @click.option("--all", "run_all", is_flag=True, help="Run complete video production pipeline")
-@click.option("--sequences-package", "seq_pkg", type=str, default=None, metavar="PKG",
-              help="Python package path for sequences (e.g. 'examples.filtermate.sequences')")
-@click.option("--sequence", "-s", type=int, default=None, metavar="N",
-              help="Run only sequence N")
-@click.option("--from", "start_from", type=int, default=None, metavar="N",
-              help="Resume pipeline from sequence N")
+@click.option(
+    "--sequences-package",
+    "seq_pkg",
+    type=str,
+    default=None,
+    metavar="PKG",
+    help="Python package path for sequences (e.g. 'examples.filtermate.sequences')",
+)
+@click.option("--sequence", "-s", type=int, default=None, metavar="N", help="Run only sequence N")
+@click.option(
+    "--from",
+    "start_from",
+    type=int,
+    default=None,
+    metavar="N",
+    help="Resume pipeline from sequence N",
+)
 @click.option("--diagrams", is_flag=True, help="Generate Mermaid diagram HTML/PNG files")
-@click.option("--diagrams-module", type=str, default=None, metavar="MOD",
-              help="Python module path for diagram definitions (e.g. 'examples.filtermate.diagrams.mermaid_definitions')")
+@click.option(
+    "--diagrams-module",
+    type=str,
+    default=None,
+    metavar="MOD",
+    help="Python module path for diagram definitions (e.g. 'examples.filtermate.diagrams.mermaid_definitions')",
+)
 @click.option("--narration", is_flag=True, help="Generate TTS narration audio files")
-@click.option("--narrations-file", type=click.Path(exists=True), default=None,
-              help="Path to narrations.yaml file")
-@click.option("--video", type=str, default=None, metavar="VXX",
-              help="Video script key in narrations.yaml (e.g. 'v01')")
+@click.option(
+    "--narrations-file",
+    type=click.Path(exists=True),
+    default=None,
+    help="Path to narrations.yaml file",
+)
+@click.option(
+    "--video",
+    type=str,
+    default=None,
+    metavar="VXX",
+    help="Video script key in narrations.yaml (e.g. 'v01')",
+)
 @click.option("--calibrate", is_flag=True, help="Run interactive UI calibration")
 @click.option("--setup-obs", "setup_obs", is_flag=True, help="Auto-configure OBS scenes/sources")
 @click.option("--subtitles", is_flag=True, help="Generate SRT subtitle files from narrations")
-@click.option("--lang", type=str, default=None, metavar="LANG",
-              help="Language code (e.g. 'fr', 'en', 'pt') for multilingual operations")
-@click.option("--narrations-dir", type=click.Path(exists=True), default=None,
-              help="Directory with per-language narration YAML files (fr.yaml, en.yaml, ...)")
-@click.option("--quality", type=click.Choice(["draft", "final"]), default="draft",
-              help="Encoding quality preset (default: draft)")
+@click.option(
+    "--lang",
+    type=str,
+    default=None,
+    metavar="LANG",
+    help="Language code (e.g. 'fr', 'en', 'pt') for multilingual operations",
+)
+@click.option(
+    "--narrations-dir",
+    type=click.Path(exists=True),
+    default=None,
+    help="Directory with per-language narration YAML files (fr.yaml, en.yaml, ...)",
+)
+@click.option(
+    "--quality",
+    type=click.Choice(["draft", "final"]),
+    default="draft",
+    help="Encoding quality preset (default: draft)",
+)
 @click.option("--assemble", is_flag=True, help="Assemble final video from recorded clips")
 @click.option("--capture", is_flag=True, help="Use headless frame capture instead of OBS")
-@click.option("--capture-fps", "capture_fps", type=int, default=None, metavar="N",
-              help="Override capture FPS")
+@click.option(
+    "--capture-fps", "capture_fps", type=int, default=None, metavar="N", help="Override capture FPS"
+)
 @click.option("--dry-run", "dry_run", is_flag=True, help="Preview without executing")
 @click.option("--list", "list_seqs", is_flag=True, help="List all sequences")
 @click.option("--project-name", type=str, default="Video", help="Project name for output labeling")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose (DEBUG) logging")
 @click.pass_context
-def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_module,
-        narration, narrations_file, video, calibrate, setup_obs, subtitles, lang,
-        narrations_dir, quality, assemble, capture, capture_fps, dry_run, list_seqs,
-        project_name, verbose):
+def cli(
+    ctx,
+    config,
+    seq_pkg,
+    run_all,
+    sequence,
+    start_from,
+    diagrams,
+    diagrams_module,
+    narration,
+    narrations_file,
+    video,
+    calibrate,
+    setup_obs,
+    subtitles,
+    lang,
+    narrations_dir,
+    quality,
+    assemble,
+    capture,
+    capture_fps,
+    dry_run,
+    list_seqs,
+    project_name,
+    verbose,
+):
     """Narractive — orchestrates App + OBS/FrameCapture + TTS + FFmpeg."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -217,8 +285,15 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
         return
 
     if run_all:
-        cmd_run_all(cfg, dry_run, seq_pkg=seq_pkg, use_capture=capture,
-                    start_from=start_from, project_name=project_name, video=video)
+        cmd_run_all(
+            cfg,
+            dry_run,
+            seq_pkg=seq_pkg,
+            use_capture=capture,
+            start_from=start_from,
+            project_name=project_name,
+            video=video,
+        )
         return
 
     click.echo(ctx.get_help())
@@ -226,11 +301,14 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
 
 # ── Sub-command implementations ────────────────────────────────────────────
 
+
 def _load_sequences(seq_pkg: str | None = None) -> list:
     """Load the right sequence list."""
     if seq_pkg:
         return load_sequences_from_package(seq_pkg)
-    logger.error("No --sequences-package specified. Use e.g. --sequences-package examples.filtermate.sequences")
+    logger.error(
+        "No --sequences-package specified. Use e.g. --sequences-package examples.filtermate.sequences"
+    )
     sys.exit(1)
 
 
@@ -256,6 +334,7 @@ def cmd_calibrate(config: dict, dry_run: bool, config_path: Path) -> None:
         click.echo("[DRY-RUN] Would launch calibrate.py")
         return
     import subprocess as sp
+
     calibrate_script = Path(__file__).parent / "scripts" / "calibrate.py"
     result = sp.run([sys.executable, str(calibrate_script), "--config", str(config_path)])
     if result.returncode != 0:
@@ -266,6 +345,7 @@ def cmd_setup_obs(config: dict, dry_run: bool) -> None:
     """Configure OBS scenes and sources."""
     sys.path.insert(0, str(Path(__file__).parent / "scripts"))
     from setup_obs import setup_obs  # type: ignore
+
     setup_obs(config, dry_run=dry_run)
 
 
@@ -276,10 +356,12 @@ def cmd_diagrams(config: dict, dry_run: bool, diagrams_module: str | None = None
         sys.exit(1)
 
     import importlib
+
     mod = importlib.import_module(diagrams_module)
     DIAGRAMS = mod.DIAGRAMS
 
     from video_automation.core.diagram_generator import DiagramGenerator
+
     gen = DiagramGenerator(config.get("diagrams", {}))
     out_dir = Path(config.get("diagrams", {}).get("output_dir", "output/diagrams"))
 
@@ -302,8 +384,10 @@ def cmd_diagrams(config: dict, dry_run: bool, diagrams_module: str | None = None
 
 
 def cmd_subtitles(
-    config: dict, dry_run: bool,
-    lang: str | None = None, narrations_dir: str | None = None,
+    config: dict,
+    dry_run: bool,
+    lang: str | None = None,
+    narrations_dir: str | None = None,
 ) -> None:
     """Generate SRT subtitle files from narration texts."""
     from video_automation.core.narrator import load_narrations_multilingual
@@ -347,20 +431,23 @@ def cmd_subtitles(
         out_dir = Path(out_template.replace("{lang}", l_code))
 
         if dry_run:
-            click.echo(f"  [{l_code.upper()}] Would generate {len(narrations)} SRT files in {out_dir}")
+            click.echo(
+                f"  [{l_code.upper()}] Would generate {len(narrations)} SRT files in {out_dir}"
+            )
             continue
 
         click.echo(f"\n  [{l_code.upper()}] Generating {len(narrations)} SRT files…")
         results = gen.generate_for_language(narrations, out_dir, lang=l_code)
         total += len(results)
-        for seq_id, path in results.items():
+        for seq_id, _path in results.items():
             click.echo(f"    {seq_id}.srt")
 
     click.echo(f"\nDone! {total} SRT files generated.\n")
 
 
-def cmd_narration(config: dict, dry_run: bool, video: str | None = None,
-                  narrations_file: str | None = None) -> None:
+def cmd_narration(
+    config: dict, dry_run: bool, video: str | None = None, narrations_file: str | None = None
+) -> None:
     """Generate TTS narration audio for all sequences."""
     from video_automation.core.narrator import Narrator, get_narration_texts
 
@@ -392,8 +479,11 @@ def cmd_narration(config: dict, dry_run: bool, video: str | None = None,
 
 
 def cmd_run_sequence(
-    config: dict, seq_num: int, dry_run: bool,
-    seq_pkg: str | None = None, use_capture: bool = False,
+    config: dict,
+    seq_num: int,
+    dry_run: bool,
+    seq_pkg: str | None = None,
+    use_capture: bool = False,
 ) -> None:
     """Run a single sequence."""
     seqs = _load_sequences(seq_pkg)
@@ -422,9 +512,12 @@ def cmd_run_sequence(
 
 
 def cmd_run_all(
-    config: dict, dry_run: bool,
-    seq_pkg: str | None = None, use_capture: bool = False,
-    start_from: int | None = None, project_name: str = "Video",
+    config: dict,
+    dry_run: bool,
+    seq_pkg: str | None = None,
+    use_capture: bool = False,
+    start_from: int | None = None,
+    project_name: str = "Video",
     video: str | None = None,
 ) -> None:
     """Run the complete video production pipeline."""
@@ -435,10 +528,9 @@ def cmd_run_all(
     click.echo(f"  {project_name} — Complete Video Production ({backend})")
     click.echo("=" * 65)
 
-    if start_from is not None:
-        if start_from < 0 or start_from >= len(SEQUENCES):
-            click.echo(f"Error: --from {start_from} out of range (0-{len(SEQUENCES) - 1})")
-            sys.exit(1)
+    if start_from is not None and (start_from < 0 or start_from >= len(SEQUENCES)):
+        click.echo(f"Error: --from {start_from} out of range (0-{len(SEQUENCES) - 1})")
+        sys.exit(1)
 
     if dry_run:
         click.echo(f"\n[DRY-RUN] Would run these sequences (backend: {backend}):\n")
@@ -462,7 +554,7 @@ def cmd_run_all(
                 continue
 
             seq = SeqClass()
-            click.echo(f"\n[{i}/{len(SEQUENCES)-1}] {seq.name}")
+            click.echo(f"\n[{i}/{len(SEQUENCES) - 1}] {seq.name}")
 
             recorder.start_recording()
             recorder.wait_for_recording_start()
@@ -485,7 +577,9 @@ def cmd_run_all(
                     click.echo(f"  ok Saved: {output_path}")
                     all_timeline_results.append((output_path, seq.timeline_result))
                     if seq.timeline_result:
-                        click.echo(f"       Timeline: {len(seq.timeline_result.narration_timecodes)} narration segments")
+                        click.echo(
+                            f"       Timeline: {len(seq.timeline_result.narration_timecodes)} narration segments"
+                        )
                 time.sleep(3)
 
     click.echo(f"\nRecorded {len(recording_files)} clips.")
@@ -493,14 +587,20 @@ def cmd_run_all(
     if recording_files:
         click.echo("\nProceeding to assembly...")
         cmd_assemble(
-            config, dry_run=False, clips=recording_files, video=video,
-            project_name=project_name, timeline_results=all_timeline_results,
+            config,
+            dry_run=False,
+            clips=recording_files,
+            video=video,
+            project_name=project_name,
+            timeline_results=all_timeline_results,
         )
 
 
 def cmd_assemble(
-    config: dict, dry_run: bool,
-    clips: list[str] | None = None, video: str | None = None,
+    config: dict,
+    dry_run: bool,
+    clips: list[str] | None = None,
+    video: str | None = None,
     project_name: str = "Video",
     timeline_results: list[tuple[str, object]] | None = None,
 ) -> None:
@@ -525,10 +625,7 @@ def cmd_assemble(
     safe_name = project_name.lower().replace(" ", "_")
     output_name = f"{safe_name}_{video}_final.mp4" if video else f"{safe_name}_final.mp4"
 
-    has_timecodes = (
-        timeline_results
-        and any(tr is not None for _, tr in timeline_results)
-    )
+    has_timecodes = timeline_results and any(tr is not None for _, tr in timeline_results)
 
     if dry_run:
         mode = "timecode-based" if has_timecodes else "legacy concat"
@@ -544,7 +641,9 @@ def cmd_assemble(
         )
     else:
         narration_files = sorted(narr_dir.glob("*_narration.mp3"))
-        click.echo(f"\nAssembling {len(clips)} clips + {len(narration_files)} narrations (legacy)...")
+        click.echo(
+            f"\nAssembling {len(clips)} clips + {len(narration_files)} narrations (legacy)..."
+        )
         final_path = assembler.create_final_video(
             clips=clips,
             narrations=list(narration_files),
@@ -556,14 +655,17 @@ def cmd_assemble(
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _init_controllers(config: dict, use_capture: bool = False):
     from video_automation.core.app_automator import AppAutomator
 
     if use_capture:
         from video_automation.core.frame_capturer import FrameCapturer
+
         recorder = FrameCapturer(config.get("capture", {}))
     else:
         from video_automation.core.obs_controller import OBSController
+
         recorder = OBSController(config.get("obs", {}))
 
     app = AppAutomator(config)
@@ -586,7 +688,8 @@ def _check_prerequisites(config: dict, use_capture: bool = False) -> None:
             click.echo(f"  !! {label} not found on PATH")
 
     try:
-        import pyautogui  # type: ignore
+        import pyautogui  # type: ignore  # noqa: F401
+
         click.echo("  ok pyautogui")
     except ImportError:
         click.echo("  xx pyautogui not installed")
@@ -599,7 +702,8 @@ def _check_prerequisites(config: dict, use_capture: bool = False) -> None:
                 click.echo(f"  !! {tool} not found (optional)")
     else:
         try:
-            import obsws_python  # type: ignore
+            import obsws_python  # type: ignore  # noqa: F401
+
             click.echo("  ok obsws-python")
         except ImportError:
             click.echo("  xx obsws-python not installed")
@@ -609,15 +713,208 @@ def _check_prerequisites(config: dict, use_capture: bool = False) -> None:
 
 # ── Entry point ────────────────────────────────────────────────────────────
 
+
 def main():
     try:
         cli(standalone_mode=False)
     except SystemExit:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Fatal error: %s", exc)
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+
+
+# ── `narractive init` ──────────────────────────────────────────────────────
+
+
+@cli.command("init")
+@click.argument("project_dir", default=".", type=click.Path())
+@click.option(
+    "--no-interactive", "no_interactive", is_flag=True, help="Skip all prompts and use defaults."
+)
+def cmd_init(project_dir: str, no_interactive: bool) -> None:
+    """Scaffold a new Narractive project directory."""
+    from video_automation.scripts.init_project import scaffold_project
+
+    project_path = Path(project_dir).resolve()
+
+    if no_interactive:
+        project_name = project_path.name or "my_project"
+        app_window = project_name
+        tts_engine = "edge-tts"
+        languages = ["fr"]
+        recording_backend = "obs"
+    else:
+        project_name = click.prompt("Project name", default=project_path.name or "my_project")
+        app_window = click.prompt("App window title (substring to match)", default=project_name)
+        tts_engine = click.prompt(
+            "TTS engine",
+            type=click.Choice(["edge-tts", "elevenlabs", "kokoro", "f5-tts"]),
+            default="edge-tts",
+        )
+        lang_input = click.prompt("Languages (comma-separated)", default="fr")
+        languages = [lang_code.strip() for lang_code in lang_input.split(",") if lang_code.strip()]
+        recording_backend = click.prompt(
+            "Recording backend",
+            type=click.Choice(["obs", "headless"]),
+            default="obs",
+        )
+
+    click.echo(f"\nScaffolding project in {project_path}...")
+    next_steps = scaffold_project(
+        project_dir=project_path,
+        project_name=project_name,
+        app_window=app_window,
+        tts_engine=tts_engine,
+        languages=languages,
+        recording_backend=recording_backend,
+    )
+    click.echo(next_steps)
+
+
+# ── `narractive validate-config` ──────────────────────────────────────────
+
+
+@cli.command("validate-config")
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default="config.yaml",
+    show_default=True,
+    help="Path to config.yaml to validate.",
+)
+def cmd_validate_config(config_path: str) -> None:
+    """Validate config.yaml against the Narractive schema."""
+    from video_automation.config_schema import is_pydantic_available, validate_config
+
+    if not is_pydantic_available():
+        click.echo("pydantic is not installed. Install with:\n  pip install 'narractive[config]'")
+        return
+
+    raw = load_config(Path(config_path))
+    cfg = validate_config(raw)
+    click.echo(f"  ok Config is valid: {config_path}")
+    click.echo(f"     narration engine : {cfg.narration.engine}")
+    click.echo(f"     languages        : {list(cfg.languages.keys()) or '(none)'}")
+
+
+# ── `narractive preview` ──────────────────────────────────────────────────
+
+
+@cli.command("preview")
+@click.option(
+    "--sequence",
+    "-s",
+    "sequence_id",
+    type=str,
+    default=None,
+    metavar="SEQ",
+    help="Sequence ID to preview (e.g. seq01).",
+)
+@click.option("--all", "preview_all", is_flag=True, help="Preview all sequences.")
+@click.option("--lang", type=str, default="fr", show_default=True, help="Language code.")
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default="config.yaml",
+    show_default=True,
+    help="Path to config.yaml.",
+)
+@click.option("--no-play", "no_play", is_flag=True, help="Print audio path without playing.")
+def cmd_preview(
+    sequence_id: str | None,
+    preview_all: bool,
+    lang: str,
+    config_path: str,
+    no_play: bool,
+) -> None:
+    """Preview narration audio for one or all sequences."""
+    import time as _time
+
+    from video_automation.core.narrator import Narrator, load_narrations_multilingual
+
+    cfg = load_config(Path(config_path))
+    narr_cfg = cfg.get("narration", {})
+    narrator = Narrator(narr_cfg)
+
+    narr_dir = Path("narrations")
+    if not narr_dir.exists():
+        click.echo(f"Narrations directory not found: {narr_dir}")
+        sys.exit(1)
+
+    narrations = load_narrations_multilingual(narr_dir, lang)
+    if not narrations:
+        click.echo(f"No narrations found for lang={lang} in {narr_dir}")
+        sys.exit(1)
+
+    out_dir = Path(narr_cfg.get("output_dir", "output/narration")) / lang
+
+    if sequence_id and not preview_all:
+        items = [(sequence_id, narrations.get(sequence_id, ""))]
+        if not narrations.get(sequence_id):
+            click.echo(f"Sequence '{sequence_id}' not found in {narr_dir}/{lang}.yaml")
+            sys.exit(1)
+    else:
+        items = list(narrations.items())
+
+    for seq_id, text in items:
+        if not text:
+            continue
+
+        audio_path = out_dir / f"{seq_id}_narration.mp3"
+
+        # Generate if not cached
+        if not audio_path.exists():
+            click.echo(f"  Generating {seq_id}...")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                audio_path = narrator.generate_narration(text, audio_path)
+            except Exception as exc:
+                click.echo(f"  !! TTS failed for {seq_id}: {exc}")
+                continue
+
+        # Estimate duration
+        try:
+            duration = narrator.get_narration_duration(audio_path)
+        except Exception:
+            duration = 0.0
+
+        preview_text = text[:80].replace("\n", " ")
+        click.echo(f"\n  [{seq_id}] ~{duration:.1f}s\n  {preview_text!r}\n  {audio_path}")
+
+        if no_play:
+            continue
+
+        # Playback: try ffplay first, fall back to playsound
+        _play_audio(audio_path)
+
+        if preview_all and len(items) > 1:
+            _time.sleep(0.5)
+
+
+def _play_audio(audio_path: Path) -> None:
+    """Play an audio file using ffplay or playsound."""
+    import subprocess as sp
+
+    try:
+        sp.run(
+            ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(audio_path)],
+            timeout=120,
+            check=False,
+        )
+    except FileNotFoundError:
+        # ffplay not available, try playsound
+        try:
+            import playsound  # type: ignore
+
+            playsound.playsound(str(audio_path))
+        except ImportError:
+            click.echo("  (install ffplay or playsound to play audio)")
+    except Exception as exc:
+        click.echo(f"  !! Playback error: {exc}")

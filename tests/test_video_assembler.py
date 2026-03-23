@@ -1,10 +1,8 @@
 """Tests for VideoAssembler (config parsing, FFmpeg checks)."""
+
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from video_automation.core.video_assembler import VideoAssembler
 
@@ -21,13 +19,15 @@ class TestVideoAssembler:
 
     @patch("video_automation.core.video_assembler._check_ffmpeg")
     def test_init_custom_config(self, mock_check, tmp_path):
-        va = VideoAssembler({
-            "final_dir": str(tmp_path / "out"),
-            "resolution": "2560x1440",
-            "fps": 60,
-            "codec": "libx265",
-            "quality": 18,
-        })
+        va = VideoAssembler(
+            {
+                "final_dir": str(tmp_path / "out"),
+                "resolution": "2560x1440",
+                "fps": 60,
+                "codec": "libx265",
+                "quality": 18,
+            }
+        )
         assert va.resolution == "2560x1440"
         assert va.fps == 60
         assert va.codec == "libx265"

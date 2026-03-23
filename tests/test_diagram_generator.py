@@ -1,7 +1,6 @@
 """Tests for DiagramGenerator (HTML generation, template rendering)."""
-from __future__ import annotations
 
-from pathlib import Path
+from __future__ import annotations
 
 import pytest
 
@@ -11,16 +10,18 @@ from video_automation.core.diagram_generator import DiagramGenerator
 @pytest.fixture
 def gen(tmp_path):
     """Create a DiagramGenerator pointed at a temp directory."""
-    return DiagramGenerator({
-        "output_dir": str(tmp_path / "diagrams"),
-        "width": 1920,
-        "height": 1080,
-        "theme": "dark",
-        "background_color": "#1a1a2e",
-        "font_family": "Segoe UI",
-        "subtitle": "Test v1.0",
-        "footer_url": "example.com",
-    })
+    return DiagramGenerator(
+        {
+            "output_dir": str(tmp_path / "diagrams"),
+            "width": 1920,
+            "height": 1080,
+            "theme": "dark",
+            "background_color": "#1a1a2e",
+            "font_family": "Segoe UI",
+            "subtitle": "Test v1.0",
+            "footer_url": "example.com",
+        }
+    )
 
 
 class TestDiagramGenerator:

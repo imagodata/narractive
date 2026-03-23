@@ -24,11 +24,9 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +58,10 @@ class FrameCapturer:
         # Internal state
         self._recording = False
         self._paused = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
-        self._frame_dir: Optional[Path] = None
+        self._frame_dir: Path | None = None
         self._frame_count = 0
         self._start_time: float = 0.0
         self._current_scene: str = "default"
@@ -76,7 +74,7 @@ class FrameCapturer:
     # Context manager (matches OBSController)
     # ------------------------------------------------------------------
 
-    def __enter__(self) -> "FrameCapturer":
+    def __enter__(self) -> FrameCapturer:
         self.connect()
         return self
 
@@ -102,11 +100,8 @@ class FrameCapturer:
         elif method == "scrot":
             if not shutil.which("scrot"):
                 raise RuntimeError("scrot not found. Install: apt install scrot")
-        elif method == "import":
-            if not shutil.which("import"):
-                raise RuntimeError(
-                    "ImageMagick 'import' not found. Install: apt install imagemagick"
-                )
+        elif method == "import" and not shutil.which("import"):
+            raise RuntimeError("ImageMagick 'import' not found. Install: apt install imagemagick")
 
         # Check FFmpeg
         if not shutil.which("ffmpeg"):
@@ -114,7 +109,9 @@ class FrameCapturer:
 
         logger.info(
             "FrameCapturer ready (method=%s, fps=%d, display=%s)",
-            method, self.fps, self.display,
+            method,
+            self.fps,
+            self.display,
         )
 
     def disconnect(self) -> None:
@@ -152,7 +149,7 @@ class FrameCapturer:
         self._thread.start()
         logger.info("Recording started → %s (fps=%d)", self._frame_dir, self.fps)
 
-    def stop_recording(self) -> Optional[str]:
+    def stop_recording(self) -> str | None:
         """
         Stop capturing frames and assemble them into a video file.
 
@@ -175,7 +172,8 @@ class FrameCapturer:
         elapsed = time.time() - self._start_time
         logger.info(
             "Recording stopped. %d frames in %.1fs (%.1f effective fps)",
-            self._frame_count, elapsed,
+            self._frame_count,
+            elapsed,
             self._frame_count / elapsed if elapsed > 0 else 0,
         )
 
@@ -247,12 +245,12 @@ class FrameCapturer:
     # Source visibility (no-op compatibility)
     # ------------------------------------------------------------------
 
-    def set_source_visibility(
-        self, scene_name: str, source_name: str, visible: bool
-    ) -> None:
+    def set_source_visibility(self, scene_name: str, source_name: str, visible: bool) -> None:
         logger.debug(
             "[capture] Source visibility (no-op): %s/%s = %s",
-            scene_name, source_name, visible,
+            scene_name,
+            source_name,
+            visible,
         )
 
     # ------------------------------------------------------------------
@@ -261,8 +259,8 @@ class FrameCapturer:
 
     def take_screenshot(
         self,
-        source_name: Optional[str] = None,
-        file_path: Optional[str] = None,
+        source_name: str | None = None,
+        file_path: str | None = None,
         width: int = 1920,
         height: int = 1080,
         quality: int = -1,
@@ -286,9 +284,7 @@ class FrameCapturer:
         if visible:
             self.switch_scene(self.scenes.get("diagram_overlay", "Diagram Overlay"))
         else:
-            self.switch_scene(
-                self.scenes.get("main", "Main")
-            )
+            self.switch_scene(self.scenes.get("main", "Main"))
 
     def transition_to_main(self) -> None:
         self.switch_scene(self.scenes.get("main", "Main"))
@@ -323,7 +319,7 @@ class FrameCapturer:
             try:
                 self._capture_frame(str(frame_path))
                 self._frame_count += 1
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Frame capture failed: %s", exc)
 
             # Maintain target FPS
@@ -343,8 +339,10 @@ class FrameCapturer:
             subprocess.run(
                 [
                     "import",
-                    "-display", self.display,
-                    "-window", "root",
+                    "-display",
+                    self.display,
+                    "-window",
+                    "root",
                     "-silent",
                     output_path,
                 ],
@@ -364,8 +362,10 @@ class FrameCapturer:
             subprocess.run(
                 [
                     "import",
-                    "-display", self.display,
-                    "-window", "root",
+                    "-display",
+                    self.display,
+                    "-window",
+                    "root",
                     "-silent",
                     output_path,
                 ],
@@ -377,12 +377,18 @@ class FrameCapturer:
             # Single-frame grab via ffmpeg (slower but reliable)
             subprocess.run(
                 [
-                    "ffmpeg", "-y",
-                    "-f", "x11grab",
-                    "-video_size", self.resolution,
-                    "-i", self.display,
-                    "-frames:v", "1",
-                    "-loglevel", "error",
+                    "ffmpeg",
+                    "-y",
+                    "-f",
+                    "x11grab",
+                    "-video_size",
+                    self.resolution,
+                    "-i",
+                    self.display,
+                    "-frames:v",
+                    "1",
+                    "-loglevel",
+                    "error",
                     output_path,
                 ],
                 check=True,
@@ -396,7 +402,7 @@ class FrameCapturer:
     # FFmpeg assembly
     # ------------------------------------------------------------------
 
-    def _assemble_current_recording(self) -> Optional[str]:
+    def _assemble_current_recording(self) -> str | None:
         """Assemble frames from current recording into a video file."""
         if self._frame_dir is None or self._frame_count == 0:
             return None
@@ -416,8 +422,8 @@ class FrameCapturer:
         self,
         frames_dir: str,
         output_path: str,
-        fps: Optional[int] = None,
-    ) -> Optional[str]:
+        fps: int | None = None,
+    ) -> str | None:
         """
         Assemble numbered PNG frames into a video file using FFmpeg.
 
@@ -447,24 +453,35 @@ class FrameCapturer:
 
         logger.info(
             "Assembling %d frames → %s (fps=%d, codec=%s, crf=%d)",
-            frame_count, output_path, fps, self.codec, self.quality,
+            frame_count,
+            output_path,
+            fps,
+            self.codec,
+            self.quality,
         )
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", frames_pattern,
-            "-c:v", self.codec,
-            "-crf", str(self.quality),
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(fps),
+            "-i",
+            frames_pattern,
+            "-c:v",
+            self.codec,
+            "-crf",
+            str(self.quality),
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
             output_path,
         ]
 
         try:
-            result = subprocess.run(
+            subprocess.run(
                 cmd,
                 check=True,
                 capture_output=True,
@@ -475,7 +492,9 @@ class FrameCapturer:
             file_size = Path(output_path).stat().st_size / (1024 * 1024)
             logger.info(
                 "Video assembled: %s (%.1fs, %.1f MB)",
-                output_path, duration, file_size,
+                output_path,
+                duration,
+                file_size,
             )
             return output_path
         except subprocess.CalledProcessError as exc:
@@ -490,7 +509,7 @@ class FrameCapturer:
         video_path: str,
         audio_path: str,
         output_path: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Mux a video file with an audio track.
 
@@ -506,14 +525,21 @@ class FrameCapturer:
         logger.info("Muxing audio: %s + %s → %s", video_path, audio_path, output_path)
 
         cmd = [
-            "ffmpeg", "-y",
-            "-i", video_path,
-            "-i", audio_path,
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", "192k",
+            "ffmpeg",
+            "-y",
+            "-i",
+            video_path,
+            "-i",
+            audio_path,
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
             "-shortest",
-            "-movflags", "+faststart",
+            "-movflags",
+            "+faststart",
             output_path,
         ]
 
@@ -525,7 +551,7 @@ class FrameCapturer:
             logger.error("Audio mux failed: %s\n%s", exc, exc.stderr)
             return None
 
-    def cleanup_frames(self, frames_dir: Optional[str] = None) -> None:
+    def cleanup_frames(self, frames_dir: str | None = None) -> None:
         """Remove frame directory after successful assembly."""
         target = frames_dir or (str(self._frame_dir) if self._frame_dir else None)
         if target and Path(target).exists():

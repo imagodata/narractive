@@ -38,35 +38,34 @@ import argparse
 import os
 import sys
 
-
 # Language code mapping: user-friendly -> Kokoro internal code
 LANG_MAP = {
-    "en": "a",       # American English
+    "en": "a",  # American English
     "en-us": "a",
-    "en-gb": "b",    # British English
-    "fr": "f",       # French
-    "pt": "p",       # Brazilian Portuguese
+    "en-gb": "b",  # British English
+    "fr": "f",  # French
+    "pt": "p",  # Brazilian Portuguese
     "pt-br": "p",
-    "es": "e",       # Spanish
-    "it": "i",       # Italian
-    "ja": "j",       # Japanese
-    "zh": "z",       # Mandarin Chinese
-    "hi": "h",       # Hindi
-    "ko": "k",       # Korean
+    "es": "e",  # Spanish
+    "it": "i",  # Italian
+    "ja": "j",  # Japanese
+    "zh": "z",  # Mandarin Chinese
+    "hi": "h",  # Hindi
+    "ko": "k",  # Korean
 }
 
 # Default voice per Kokoro language code
 DEFAULT_VOICES = {
-    "a": "af_heart",      # American English female
-    "b": "bf_emma",       # British English female
-    "f": "ff_siwis",      # French female
-    "p": "pf_dora",       # Portuguese BR female
-    "e": "ef_dora",       # Spanish female
-    "i": "if_sara",       # Italian female
-    "j": "jf_alpha",      # Japanese female
-    "z": "zf_xiaobei",    # Mandarin female
-    "h": "hf_alpha",      # Hindi female
-    "k": "kf_alpha",      # Korean female
+    "a": "af_heart",  # American English female
+    "b": "bf_emma",  # British English female
+    "f": "ff_siwis",  # French female
+    "p": "pf_dora",  # Portuguese BR female
+    "e": "ef_dora",  # Spanish female
+    "i": "if_sara",  # Italian female
+    "j": "jf_alpha",  # Japanese female
+    "z": "zf_xiaobei",  # Mandarin female
+    "h": "hf_alpha",  # Hindi female
+    "k": "kf_alpha",  # Korean female
 }
 
 

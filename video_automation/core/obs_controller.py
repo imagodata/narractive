@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class OBSController:
     # Context manager
     # ------------------------------------------------------------------
 
-    def __enter__(self) -> "OBSController":
+    def __enter__(self) -> OBSController:
         self.connect()
         return self
 
@@ -89,10 +89,10 @@ class OBSController:
                     resp = self._client.get_scene_list()
                     scene_names = [s["sceneName"] for s in resp.scenes]
                     logger.info("Available OBS scenes: %s", scene_names)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("Connection attempt %d failed: %s", attempt, exc)
                 if attempt < retries:
                     time.sleep(delay)
@@ -107,7 +107,7 @@ class OBSController:
             try:
                 self._client.disconnect()
                 logger.info("Disconnected from OBS.")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.debug("Error during disconnect: %s", exc)
             finally:
                 self._client = None
@@ -157,7 +157,7 @@ class OBSController:
             logger.error("Failed to start recording: %s", exc)
             raise
 
-    def stop_recording(self) -> Optional[str]:
+    def stop_recording(self) -> str | None:
         """
         Stop OBS recording.
 
@@ -220,9 +220,7 @@ class OBSController:
     # Source visibility
     # ------------------------------------------------------------------
 
-    def set_source_visibility(
-        self, scene_name: str, source_name: str, visible: bool
-    ) -> None:
+    def set_source_visibility(self, scene_name: str, source_name: str, visible: bool) -> None:
         """Show or hide a source within a scene."""
         client = self._require_client()
         try:
@@ -237,9 +235,7 @@ class OBSController:
                 visible,
             )
         except Exception as exc:
-            logger.error(
-                "Failed to set visibility for source '%s': %s", source_name, exc
-            )
+            logger.error("Failed to set visibility for source '%s': %s", source_name, exc)
             raise
 
     # ------------------------------------------------------------------
@@ -248,8 +244,8 @@ class OBSController:
 
     def take_screenshot(
         self,
-        source_name: Optional[str] = None,
-        file_path: Optional[str] = None,
+        source_name: str | None = None,
+        file_path: str | None = None,
         width: int = 1920,
         height: int = 1080,
         quality: int = -1,
@@ -266,7 +262,7 @@ class OBSController:
         width, height : int
             Output resolution.
         quality : int
-            JPEG quality (−1 = default).
+            JPEG quality (-1 = default).
 
         Returns
         -------
@@ -279,14 +275,10 @@ class OBSController:
             file_path = str(Path.cwd() / f"screenshot_{ts}.png")
 
         if source_name:
-            resp = client.get_source_screenshot(
-                source_name, "png", width, height, quality
-            )
+            resp = client.get_source_screenshot(source_name, "png", width, height, quality)
         else:
             current_scene = self.get_current_scene()
-            resp = client.get_source_screenshot(
-                current_scene, "png", width, height, quality
-            )
+            resp = client.get_source_screenshot(current_scene, "png", width, height, quality)
 
         # The response contains base64 image data — save it
         import base64

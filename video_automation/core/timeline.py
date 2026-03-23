@@ -26,12 +26,12 @@ from __future__ import annotations
 
 import logging
 import subprocess
-import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from video_automation.core.narrator import Narrator
@@ -68,15 +68,15 @@ class NarrationCue:
     """
 
     text: str = ""
-    actions: Optional[Callable[[], None]] = None
+    actions: Callable[[], None] | None = None
     sync: str = "during"  # "during", "after", "before"
     pre_delay: float = 0.0
     post_delay: float = 0.5
-    scene: Optional[str] = None
+    scene: str | None = None
     label: str = ""
 
     # Filled at runtime by TimelineExecutor
-    _audio_path: Optional[Path] = field(default=None, repr=False)
+    _audio_path: Path | None = field(default=None, repr=False)
     _audio_duration: float = field(default=0.0, repr=False)
 
     def __post_init__(self):
@@ -119,9 +119,9 @@ class TimelineExecutor:
 
     def __init__(
         self,
-        narrator: "Narrator",
+        narrator: Narrator,
         sequence_id: str,
-        cache_dir: Optional[Path] = None,
+        cache_dir: Path | None = None,
         play_audio: bool = False,
     ):
         self.narrator = narrator
@@ -152,17 +152,11 @@ class TimelineExecutor:
                 # Check if cached version matches (simple size check)
                 cue._audio_path = audio_file
                 cue._audio_duration = self.narrator.get_narration_duration(audio_file)
-                self._log.debug(
-                    "Cue %d cached: %.1fs — %s", i, cue._audio_duration, cue.label
-                )
+                self._log.debug("Cue %d cached: %.1fs — %s", i, cue._audio_duration, cue.label)
             else:
-                cue._audio_path = self.narrator.generate_narration(
-                    cue.text, audio_file
-                )
+                cue._audio_path = self.narrator.generate_narration(cue.text, audio_file)
                 cue._audio_duration = self.narrator.get_narration_duration(audio_file)
-                self._log.info(
-                    "Cue %d generated: %.1fs — %s", i, cue._audio_duration, cue.label
-                )
+                self._log.info("Cue %d generated: %.1fs — %s", i, cue._audio_duration, cue.label)
 
     def execute(self, cues: list[NarrationCue], obs=None) -> TimelineResult:
         """
@@ -188,7 +182,10 @@ class TimelineExecutor:
             elapsed = cue_start - timeline_start
             self._log.info(
                 "[%6.1fs] Cue %d/%d: %s",
-                elapsed, i + 1, len(cues), cue.label or "(silent)",
+                elapsed,
+                i + 1,
+                len(cues),
+                cue.label or "(silent)",
             )
 
             # Pre-delay
@@ -233,7 +230,11 @@ class TimelineExecutor:
             cue_total = time.time() - cue_start
             self._log.debug(
                 "  Cue %d complete: %.1fs (audio=%.1fs, pre=%.1f, post=%.1f)",
-                i, cue_total, cue._audio_duration, cue.pre_delay, cue.post_delay,
+                i,
+                cue_total,
+                cue._audio_duration,
+                cue.pre_delay,
+                cue.post_delay,
             )
 
         total_duration = time.time() - timeline_start
@@ -275,7 +276,8 @@ class TimelineExecutor:
         if remaining > 0:
             self._log.debug(
                 "  Actions took %.1fs, padding %.1fs to match narration",
-                action_elapsed, remaining,
+                action_elapsed,
+                remaining,
             )
             time.sleep(remaining)
 
@@ -304,7 +306,11 @@ class TimelineExecutor:
             # Use ffplay (from FFmpeg) for cross-platform audio playback
             proc = subprocess.run(
                 [
-                    "ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet",
+                    "ffplay",
+                    "-nodisp",
+                    "-autoexit",
+                    "-loglevel",
+                    "quiet",
                     str(audio_path),
                 ],
                 timeout=60,

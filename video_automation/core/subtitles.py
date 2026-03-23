@@ -22,11 +22,9 @@ Usage::
 from __future__ import annotations
 
 import logging
-import math
 import re
 import textwrap
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +83,7 @@ def format_timestamp(seconds: float) -> str:
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
-    millis = int(round((seconds - int(seconds)) * 1000))
+    millis = round((seconds - int(seconds)) * 1000)
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
@@ -253,9 +251,7 @@ class SubtitleGenerator:
         self.enabled: bool = config.get("enabled", True)
         self.max_chars: int = config.get("max_chars_per_line", 42)
         self.max_lines: int = config.get("max_lines", 2)
-        self.output_dir_template: str = config.get(
-            "output_dir", "output/{lang}/subtitles"
-        )
+        self.output_dir_template: str = config.get("output_dir", "output/{lang}/subtitles")
 
     def generate_for_sequence(
         self,
@@ -263,7 +259,7 @@ class SubtitleGenerator:
         narration_text: str,
         output_path: str | Path,
         lang: str = "fr",
-        wpm: Optional[int] = None,
+        wpm: int | None = None,
     ) -> Path:
         """
         Generate an SRT file for a single sequence.
@@ -303,7 +299,10 @@ class SubtitleGenerator:
         est = estimate_duration(narration_text.replace("\n", " "), effective_wpm)
         logger.info(
             "Generated %s (%d words, ~%.0fs at %d WPM)",
-            output_path.name, words, est, effective_wpm,
+            output_path.name,
+            words,
+            est,
+            effective_wpm,
         )
         return output_path
 
@@ -312,7 +311,7 @@ class SubtitleGenerator:
         narrations: dict[str, str],
         output_dir: str | Path,
         lang: str = "fr",
-        wpm: Optional[int] = None,
+        wpm: int | None = None,
     ) -> dict[str, Path]:
         """
         Batch-generate SRT files for all sequences of a language.
@@ -346,6 +345,9 @@ class SubtitleGenerator:
             results[seq_id] = output_path
 
         logger.info(
-            "Generated %d SRT files for %s in %s", len(results), lang, output_dir,
+            "Generated %d SRT files for %s in %s",
+            len(results),
+            lang,
+            output_dir,
         )
         return results

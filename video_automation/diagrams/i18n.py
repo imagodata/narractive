@@ -21,14 +21,13 @@ Usage::
         default_lang="fr",
     )
 
-    name = labels.l("server", "en")       # "Server"
+    name = labels.label("server", "en")       # "Server"
     title = labels.t("architecture", "pt") # "Architecture" (fallback to fr)
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ class DiagramLabels:
     def __init__(
         self,
         labels: dict[str, dict[str, str]],
-        titles: Optional[dict[str, dict[str, str]]] = None,
+        titles: dict[str, dict[str, str]] | None = None,
         default_lang: str = "fr",
     ) -> None:
         self._labels = labels
@@ -64,7 +63,7 @@ class DiagramLabels:
     # Public API
     # ------------------------------------------------------------------
 
-    def l(self, label_id: str, lang: str) -> str:  # noqa: E741 — single-letter method
+    def label(self, label_id: str, lang: str) -> str:
         """
         Get a translated label with fallback.
 

@@ -1,6 +1,9 @@
 """Quick non-interactive recalibration for sidebar_identify and sidebar_zoom."""
-import sys, time
+
+import sys
+import time
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import pyautogui
 import yaml

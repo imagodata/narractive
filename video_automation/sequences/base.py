@@ -17,11 +17,11 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from video_automation.core.app_automator import AppAutomator
-    from video_automation.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
+    from video_automation.core.timeline import NarrationCue, TimelineResult
 
 
 @runtime_checkable
@@ -38,8 +38,9 @@ class Recorder(Protocol):
     def switch_scene(self, scene_name: str) -> None: ...
     def get_current_scene(self) -> str: ...
     def show_diagram_overlay(self, visible: bool) -> None: ...
-    def __enter__(self) -> "Recorder": ...
+    def __enter__(self) -> Recorder: ...
     def __exit__(self, *args: object) -> None: ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,11 +71,11 @@ class VideoSequence(ABC):
     sequence_id: str = "seq00"
     duration_estimate: float = 30.0
     narration_text: str = ""
-    diagram_ids: list[str] = []
+    diagram_ids: ClassVar[list[str]] = []
     obs_scene: str = "Main"
 
     # Populated after execution for TimelineSequence; always None for legacy.
-    timeline_result: Optional["TimelineResult"] = None
+    timeline_result: TimelineResult | None = None
 
     def __init__(self) -> None:
         self._start_time: float = 0.0
@@ -84,7 +85,7 @@ class VideoSequence(ABC):
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def setup(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
+    def setup(self, obs: Recorder, app: AppAutomator, config: dict) -> None:
         """
         Called before recording starts. Switch scene, focus the app, etc.
         Override to add sequence-specific setup.
@@ -92,7 +93,7 @@ class VideoSequence(ABC):
         self._log.info("=== SETUP: %s ===", self.name)
         try:
             obs.switch_scene(self.obs_scene)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._log.warning("Scene switch failed: %s", exc)
 
         app.focus_app()
@@ -100,14 +101,14 @@ class VideoSequence(ABC):
         time.sleep(transition_pause)
 
     @abstractmethod
-    def execute(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
+    def execute(self, obs: Recorder, app: AppAutomator, config: dict) -> None:
         """
         Main automation steps for this sequence.
         Must be implemented by each subclass.
         """
         ...
 
-    def teardown(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
+    def teardown(self, obs: Recorder, app: AppAutomator, config: dict) -> None:
         """
         Called after the sequence finishes. Pause before next sequence.
         Override if cleanup is needed.
@@ -120,7 +121,7 @@ class VideoSequence(ABC):
     # Convenience helpers
     # ------------------------------------------------------------------
 
-    def run(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
+    def run(self, obs: Recorder, app: AppAutomator, config: dict) -> None:
         """Run the full sequence: setup -> execute -> teardown."""
         self._start_time = time.time()
         self._log.info("Starting sequence: %s", self.name)
@@ -136,7 +137,7 @@ class VideoSequence(ABC):
 
     def edit_config_value(
         self,
-        app: "AppAutomator",
+        app: AppAutomator,
         config: dict,
         region_name: str,
         value: str,
@@ -161,8 +162,8 @@ class VideoSequence(ABC):
 
     def show_diagram_and_return(
         self,
-        obs: "Recorder",
-        app: "AppAutomator",
+        obs: Recorder,
+        app: AppAutomator,
         diagram_id: str,
         duration: float = 5.0,
     ) -> None:
@@ -171,7 +172,7 @@ class VideoSequence(ABC):
         app.focus_panel()
         app.wait(0.5)
 
-    def show_diagram(self, obs: "Recorder", diagram_id: str, duration: float = 5.0) -> None:
+    def show_diagram(self, obs: Recorder, diagram_id: str, duration: float = 5.0) -> None:
         """Switch to the Diagram Overlay scene, wait, then switch back."""
         self._log.info("Showing diagram: %s for %.1fs", diagram_id, duration)
         obs.show_diagram_overlay(visible=True)
@@ -203,19 +204,17 @@ class TimelineSequence(VideoSequence):
 
     def build_timeline(
         self,
-        obs: "Recorder",
-        app: "AppAutomator",
+        obs: Recorder,
+        app: AppAutomator,
         config: dict,
-    ) -> list["NarrationCue"]:
+    ) -> list[NarrationCue]:
         """
         Build the list of narration cues for this sequence.
         Override this method instead of ``execute()``.
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement build_timeline()"
-        )
+        raise NotImplementedError(f"{self.__class__.__name__} must implement build_timeline()")
 
-    def execute(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
+    def execute(self, obs: Recorder, app: AppAutomator, config: dict) -> None:
         """Execute the timeline: prepare narration audio, then run cues."""
         from video_automation.core.narrator import Narrator
         from video_automation.core.timeline import TimelineExecutor
@@ -245,11 +244,14 @@ class TimelineSequence(VideoSequence):
         estimated = executor.get_total_estimated_duration(cues)
         self._log.info(
             "%s: %d cues, ~%.0fs estimated",
-            self.name, len(cues), estimated,
+            self.name,
+            len(cues),
+            estimated,
         )
 
         self.timeline_result = executor.execute(cues, obs=obs)
         self._log.info(
             "%s complete: %.1fs actual",
-            self.name, self.timeline_result.total_duration,
+            self.name,
+            self.timeline_result.total_duration,
         )

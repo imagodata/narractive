@@ -48,10 +48,12 @@ all = [
 headless = [
     "python-xlib>=0.33",
 ]
+config = ["pydantic>=2.0"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.4",
+    "pydantic>=2.0",
 ]
 
 [project.scripts]

@@ -62,7 +62,9 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
     obs_cfg = config.get("obs", {})
 
     if dry_run:
-        logger.info("[DRY RUN] Would connect to OBS at %s:%s", obs_cfg.get("host"), obs_cfg.get("port"))
+        logger.info(
+            "[DRY RUN] Would connect to OBS at %s:%s", obs_cfg.get("host"), obs_cfg.get("port")
+        )
         logger.info("[DRY RUN] Would create scenes: %s", SCENES_TO_CREATE)
         logger.info("[DRY RUN] Would configure recording: MKV, x264, 1080p30")
         return
@@ -106,8 +108,13 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
     # ── Add Display Capture to application scenes ──────────────────────────
     app_scenes = ["App Fullscreen", "App + Panel"]
     for scene_name in app_scenes:
-        _add_source(client, scene_name, "Display Capture", "monitor_capture",
-                    settings={"monitor": 0, "capture_cursor": True})
+        _add_source(
+            client,
+            scene_name,
+            "Display Capture",
+            "monitor_capture",
+            settings={"monitor": 0, "capture_cursor": True},
+        )
 
     # ── Add Browser Source for Diagram Overlay ─────────────────────────────
     diagram_dir = Path(config.get("diagrams", {}).get("output_dir", "output/diagrams")).resolve()
@@ -115,34 +122,49 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
     # We use the first diagram as default; the real setup switches files per-sequence
     default_diagram = diagram_dir / "01_positioning.html"
     browser_url = default_diagram.as_uri()
-    _add_source(client, "Diagram Overlay", "Diagram", "browser_source",
-                settings={
-                    "url": browser_url,
-                    "width": 1920,
-                    "height": 1080,
-                    "fps": 30,
-                    "css": "body { margin: 0; overflow: hidden; }",
-                    "shutdown": True,
-                    "restart_when_active": True,
-                })
+    _add_source(
+        client,
+        "Diagram Overlay",
+        "Diagram",
+        "browser_source",
+        settings={
+            "url": browser_url,
+            "width": 1920,
+            "height": 1080,
+            "fps": 30,
+            "css": "body { margin: 0; overflow: hidden; }",
+            "shutdown": True,
+            "restart_when_active": True,
+        },
+    )
 
     # ── Add Text sources for Intro/Outro ──────────────────────────────────
-    _add_source(client, "Intro", "Intro Title", "text_gdiplus_v3",
-                settings={
-                    "text": config.get("app", {}).get("window_title", "Demo"),
-                    "font": {"face": "Segoe UI", "size": 72, "bold": True},
-                    "color": 0xFF4CAF50,
-                    "align": "center",
-                    "valign": "center",
-                })
-    _add_source(client, "Outro", "Outro Text", "text_gdiplus_v3",
-                settings={
-                    "text": "Thank you for watching",
-                    "font": {"face": "Segoe UI", "size": 48, "bold": False},
-                    "color": 0xFFE0E0E0,
-                    "align": "center",
-                    "valign": "center",
-                })
+    _add_source(
+        client,
+        "Intro",
+        "Intro Title",
+        "text_gdiplus_v3",
+        settings={
+            "text": config.get("app", {}).get("window_title", "Demo"),
+            "font": {"face": "Segoe UI", "size": 72, "bold": True},
+            "color": 0xFF4CAF50,
+            "align": "center",
+            "valign": "center",
+        },
+    )
+    _add_source(
+        client,
+        "Outro",
+        "Outro Text",
+        "text_gdiplus_v3",
+        settings={
+            "text": "Thank you for watching",
+            "font": {"face": "Segoe UI", "size": 48, "bold": False},
+            "color": 0xFFE0E0E0,
+            "align": "center",
+            "valign": "center",
+        },
+    )
 
     # ── Configure recording settings ───────────────────────────────────────
     output_dir = obs_cfg.get("output_dir", str(Path.home() / "Videos"))
@@ -154,12 +176,8 @@ def setup_obs(config: dict, dry_run: bool = False) -> None:
         logger.warning("Could not set recording directory: %s", exc)
 
     logger.info("OBS setup complete!")
-    logger.info(
-        "TIP: Configure recording format to MKV in OBS Settings → Output → Recording."
-    )
-    logger.info(
-        "TIP: Set encoder to x264, bitrate 15000–25000 kbps, resolution 1920x1080, 30fps."
-    )
+    logger.info("TIP: Configure recording format to MKV in OBS Settings → Output → Recording.")
+    logger.info("TIP: Set encoder to x264, bitrate 15000-25000 kbps, resolution 1920x1080, 30fps.")
 
 
 def _add_source(
@@ -181,7 +199,9 @@ def _add_source(
 def main():
     parser = argparse.ArgumentParser(description="Configure OBS for FilterMate video production.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would happen without executing"
+    )
     args = parser.parse_args()
 
     if not args.config.exists():

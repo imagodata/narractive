@@ -1,8 +1,6 @@
 """Tests for the Narrator class (TTS engine selection, config parsing)."""
-from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
 
 import pytest
 
@@ -32,7 +30,7 @@ class TestNarrator:
         assert n.voice == "test_voice"
 
     def test_init_creates_output_dir(self, narrator_config, tmp_path):
-        n = Narrator(narrator_config)
+        Narrator(narrator_config)
         assert (tmp_path / "narration").is_dir()
 
     def test_unknown_engine_raises(self, narrator_config):
@@ -42,16 +40,18 @@ class TestNarrator:
             n.generate_narration("Hello", "test.mp3")
 
     def test_f5_config(self, tmp_path):
-        n = Narrator({
-            "engine": "f5-tts",
-            "output_dir": str(tmp_path),
-            "f5_ref_audio": "ref.wav",
-            "f5_ref_text": "reference",
-            "f5_model": "CustomModel",
-            "f5_speed": 1.2,
-            "f5_conda_env": "my-env",
-            "f5_remove_silence": True,
-        })
+        n = Narrator(
+            {
+                "engine": "f5-tts",
+                "output_dir": str(tmp_path),
+                "f5_ref_audio": "ref.wav",
+                "f5_ref_text": "reference",
+                "f5_model": "CustomModel",
+                "f5_speed": 1.2,
+                "f5_conda_env": "my-env",
+                "f5_remove_silence": True,
+            }
+        )
         assert n.f5_ref_audio == "ref.wav"
         assert n.f5_model == "CustomModel"
         assert n.f5_speed == 1.2

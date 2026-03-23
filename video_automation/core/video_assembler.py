@@ -25,7 +25,6 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +97,7 @@ class VideoAssembler:
     # Remux
     # ------------------------------------------------------------------
 
-    def remux_mkv_to_mp4(self, mkv_path: str | Path, output_path: Optional[str | Path] = None) -> Path:
+    def remux_mkv_to_mp4(self, mkv_path: str | Path, output_path: str | Path | None = None) -> Path:
         """
         Losslessly remux an MKV to MP4 (no re-encoding).
 
@@ -120,8 +119,10 @@ class VideoAssembler:
         output_path = Path(output_path)
 
         _run_ffmpeg(
-            "-i", str(mkv_path),
-            "-c", "copy",
+            "-i",
+            str(mkv_path),
+            "-c",
+            "copy",
             str(output_path),
         )
         logger.info("Remuxed %s → %s", mkv_path.name, output_path.name)
@@ -151,7 +152,7 @@ class VideoAssembler:
         output_path : str | Path
             Output video file.
         narration_volume : float
-            Volume multiplier for narration (0.0–2.0).
+            Volume multiplier for narration (0.0-2.0).
         original_volume : float
             Volume multiplier for original video audio (0 = mute original).
 
@@ -171,14 +172,22 @@ class VideoAssembler:
         )
 
         _run_ffmpeg(
-            "-i", str(video_path),
-            "-i", str(narration_path),
-            "-filter_complex", filter_complex,
-            "-map", "0:v",
-            "-map", "[aout]",
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", "192k",
+            "-i",
+            str(video_path),
+            "-i",
+            str(narration_path),
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "0:v",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
             str(output_path),
         )
         logger.info("Added narration to %s → %s", video_path.name, output_path.name)
@@ -240,7 +249,7 @@ class VideoAssembler:
         # Chain overlays
         filter_parts: list[str] = []
         prev_label = "0:v"
-        for idx, (dp, ts) in enumerate(zip(diagram_paths, timestamps), start=1):
+        for idx, (_dp, ts) in enumerate(zip(diagram_paths, timestamps, strict=False), start=1):
             fade_in = (
                 f"[{idx}:v]"
                 f"fade=t=in:st=0:d={fade_duration},"
@@ -258,15 +267,23 @@ class VideoAssembler:
 
         _run_ffmpeg(
             *inputs,
-            "-filter_complex", filter_complex,
-            "-map", f"[{prev_label}]",
-            "-map", "0:a?",
-            "-c:v", self.codec,
-            "-crf", self.quality,
-            "-c:a", "copy",
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            f"[{prev_label}]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            self.codec,
+            "-crf",
+            self.quality,
+            "-c:a",
+            "copy",
             str(output_path),
         )
-        logger.info("Combined recording with %d diagrams → %s", len(diagram_paths), output_path.name)
+        logger.info(
+            "Combined recording with %d diagrams → %s", len(diagram_paths), output_path.name
+        )
         return output_path
 
     # ------------------------------------------------------------------
@@ -276,8 +293,8 @@ class VideoAssembler:
     def add_intro_outro(
         self,
         video_path: str | Path,
-        intro_path: Optional[str | Path],
-        outro_path: Optional[str | Path],
+        intro_path: str | Path | None,
+        outro_path: str | Path | None,
         output_path: str | Path,
     ) -> Path:
         """
@@ -317,10 +334,14 @@ class VideoAssembler:
             concat_file = tmp.name
 
         _run_ffmpeg(
-            "-f", "concat",
-            "-safe", "0",
-            "-i", concat_file,
-            "-c", "copy",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_file,
+            "-c",
+            "copy",
             str(output_path),
         )
         Path(concat_file).unlink(missing_ok=True)
@@ -335,8 +356,8 @@ class VideoAssembler:
         self,
         clips: list[str | Path],
         narrations: list[str | Path],
-        diagrams: Optional[dict] = None,
-        output_path: Optional[str | Path] = None,
+        diagrams: dict | None = None,
+        output_path: str | Path | None = None,
     ) -> Path:
         """
         Full post-production pipeline:
@@ -388,15 +409,24 @@ class VideoAssembler:
             # Step 3: Final encode
             logger.info("Step 3/3: Final encoding → %s", output_path.name)
             _run_ffmpeg(
-                "-i", str(narrated_path),
-                "-c:v", self.codec,
-                "-crf", self.quality,
-                "-preset", "slow",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-movflags", "+faststart",
-                "-vf", f"scale={self.resolution.replace('x', ':')}",
-                "-r", str(self.fps),
+                "-i",
+                str(narrated_path),
+                "-c:v",
+                self.codec,
+                "-crf",
+                self.quality,
+                "-preset",
+                "slow",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                "-movflags",
+                "+faststart",
+                "-vf",
+                f"scale={self.resolution.replace('x', ':')}",
+                "-r",
+                str(self.fps),
                 str(output_path),
             )
 
@@ -452,7 +482,9 @@ class VideoAssembler:
             logger.info("Step 3/4: Building narration track…")
             narr_track = tmp / "narration_timed.wav"
             has_narration = self._build_timed_narration_track(
-                clip_offsets, timeline_results, narr_track,
+                clip_offsets,
+                timeline_results,
+                narr_track,
             )
 
             # Step 4: Mix narration with video and encode
@@ -464,15 +496,24 @@ class VideoAssembler:
                 narrated_path = concat_path
 
             _run_ffmpeg(
-                "-i", str(narrated_path),
-                "-c:v", self.codec,
-                "-crf", self.quality,
-                "-preset", "slow",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-movflags", "+faststart",
-                "-vf", f"scale={self.resolution.replace('x', ':')}",
-                "-r", str(self.fps),
+                "-i",
+                str(narrated_path),
+                "-c:v",
+                self.codec,
+                "-crf",
+                self.quality,
+                "-preset",
+                "slow",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                "-movflags",
+                "+faststart",
+                "-vf",
+                f"scale={self.resolution.replace('x', ':')}",
+                "-r",
+                str(self.fps),
                 str(output_path),
             )
 
@@ -493,12 +534,17 @@ class VideoAssembler:
             try:
                 result = subprocess.run(
                     [
-                        "ffprobe", "-v", "quiet",
-                        "-print_format", "json",
+                        "ffprobe",
+                        "-v",
+                        "quiet",
+                        "-print_format",
+                        "json",
                         "-show_format",
                         str(clip),
                     ],
-                    capture_output=True, text=True, check=True,
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 )
                 data = json.loads(result.stdout)
                 duration = float(data["format"]["duration"])
@@ -531,7 +577,9 @@ class VideoAssembler:
                 abs_timecode = clip_offset + rel_timecode
                 all_segments.append((abs_timecode, audio_path))
                 logger.debug(
-                    "Narration segment at %.1fs: %s", abs_timecode, audio_path.name,
+                    "Narration segment at %.1fs: %s",
+                    abs_timecode,
+                    audio_path.name,
                 )
 
         if not all_segments:
@@ -547,11 +595,16 @@ class VideoAssembler:
         filter_parts = []
 
         # Input 0: silent base track
-        inputs.extend([
-            "-f", "lavfi",
-            "-t", str(total_duration),
-            "-i", f"anullsrc=r=44100:cl=stereo",
-        ])
+        inputs.extend(
+            [
+                "-f",
+                "lavfi",
+                "-t",
+                str(total_duration),
+                "-i",
+                "anullsrc=r=44100:cl=stereo",
+            ]
+        )
 
         # Filter out empty or missing narration files
         valid_segments: list[tuple[float, Path]] = []
@@ -572,9 +625,7 @@ class VideoAssembler:
             input_idx = idx + 1
             inputs.extend(["-i", str(audio_path)])
             delay_ms = int(timecode * 1000)
-            filter_parts.append(
-                f"[{input_idx}:a]adelay={delay_ms}|{delay_ms}[seg{idx}]"
-            )
+            filter_parts.append(f"[{input_idx}:a]adelay={delay_ms}|{delay_ms}[seg{idx}]")
 
         # Mix all delayed segments with the silent base.
         # normalize=0 prevents amix from dividing volume by N inputs
@@ -589,9 +640,12 @@ class VideoAssembler:
 
         _run_ffmpeg(
             *inputs,
-            "-filter_complex", filter_complex,
-            "-map", "[aout]",
-            "-c:a", "pcm_s16le",
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[aout]",
+            "-c:a",
+            "pcm_s16le",
             str(output_path),
         )
 
@@ -609,10 +663,14 @@ class VideoAssembler:
                 tmp.write(f"file '{Path(clip).resolve()}'\n")
             concat_file = tmp.name
         _run_ffmpeg(
-            "-f", "concat",
-            "-safe", "0",
-            "-i", concat_file,
-            "-c", "copy",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_file,
+            "-c",
+            "copy",
             str(output_path),
         )
         Path(concat_file).unlink(missing_ok=True)
@@ -624,10 +682,14 @@ class VideoAssembler:
                 tmp.write(f"file '{Path(af).resolve()}'\n")
             concat_file = tmp.name
         _run_ffmpeg(
-            "-f", "concat",
-            "-safe", "0",
-            "-i", concat_file,
-            "-c", "copy",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_file,
+            "-c",
+            "copy",
             str(output_path),
         )
         Path(concat_file).unlink(missing_ok=True)
@@ -645,7 +707,7 @@ class VideoAssembler:
         quality: str = "draft",
         burn_subtitles: bool = True,
         dry_run: bool = False,
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """
         Assemble a single sequence: recording + narration + subtitles.
 
@@ -711,8 +773,8 @@ class VideoAssembler:
             return None
 
         has_subs = burn_subtitles and subtitle.exists()
-        has_intro = intro_img.exists()
-        has_outro = outro_img.exists()
+        intro_img.exists()
+        outro_img.exists()
 
         # Get durations
         video_dur = get_media_duration(recording)
@@ -746,13 +808,9 @@ class VideoAssembler:
         # Duration matching
         if audio_dur > video_dur:
             pad = audio_dur - video_dur
-            filter_parts.append(
-                f"[v_scaled]tpad=stop_mode=clone:stop_duration={pad:.3f}[v_padded]"
-            )
+            filter_parts.append(f"[v_scaled]tpad=stop_mode=clone:stop_duration={pad:.3f}[v_padded]")
         else:
-            filter_parts.append(
-                f"[v_scaled]trim=0:{audio_dur:.3f},setpts=PTS-STARTPTS[v_padded]"
-            )
+            filter_parts.append(f"[v_scaled]trim=0:{audio_dur:.3f},setpts=PTS-STARTPTS[v_padded]")
         current_v = "[v_padded]"
 
         # Subtitle burn
@@ -787,21 +845,36 @@ class VideoAssembler:
 
         # Build FFmpeg command
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(recording),
-            "-i", str(narration),
-            "-filter_complex", filter_complex,
-            "-map", "[v_out]",
-            "-map", "[a_out]",
-            "-c:v", "libx264",
-            "-preset", preset["preset"],
-            "-crf", str(preset["crf"]),
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-ar", str(AUDIO_SAMPLE_RATE),
-            "-ac", str(AUDIO_CHANNELS),
-            "-movflags", "+faststart",
-            "-pix_fmt", "yuv420p",
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(recording),
+            "-i",
+            str(narration),
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[v_out]",
+            "-map",
+            "[a_out]",
+            "-c:v",
+            "libx264",
+            "-preset",
+            preset["preset"],
+            "-crf",
+            str(preset["crf"]),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            str(AUDIO_SAMPLE_RATE),
+            "-ac",
+            str(AUDIO_CHANNELS),
+            "-movflags",
+            "+faststart",
+            "-pix_fmt",
+            "yuv420p",
             str(output),
         ]
 
@@ -811,7 +884,11 @@ class VideoAssembler:
 
         logger.info("Assembling %s (%s)…", sequence_id, quality)
         result = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=600,
         )
         if result.returncode != 0:
@@ -867,24 +944,38 @@ class VideoAssembler:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         _run_ffmpeg(
-            "-loop", "1",
-            "-i", str(image_path),
-            "-f", "lavfi",
-            "-i", f"anullsrc=r={AUDIO_SAMPLE_RATE}:cl=stereo",
-            "-t", f"{duration:.3f}",
-            "-vf", (
+            "-loop",
+            "1",
+            "-i",
+            str(image_path),
+            "-f",
+            "lavfi",
+            "-i",
+            f"anullsrc=r={AUDIO_SAMPLE_RATE}:cl=stereo",
+            "-t",
+            f"{duration:.3f}",
+            "-vf",
+            (
                 f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
                 f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,"
                 f"fps={fps},setsar=1"
             ),
-            "-c:v", "libx264",
-            "-preset", preset["preset"],
-            "-crf", str(preset["crf"]),
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-ar", str(AUDIO_SAMPLE_RATE),
-            "-ac", str(AUDIO_CHANNELS),
-            "-pix_fmt", "yuv420p",
+            "-c:v",
+            "libx264",
+            "-preset",
+            preset["preset"],
+            "-crf",
+            str(preset["crf"]),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            str(AUDIO_SAMPLE_RATE),
+            "-ac",
+            str(AUDIO_CHANNELS),
+            "-pix_fmt",
+            "yuv420p",
             "-shortest",
             str(output_path),
         )
@@ -897,7 +988,7 @@ class VideoAssembler:
 # ---------------------------------------------------------------------------
 
 
-def get_media_duration(file_path: str | Path) -> Optional[float]:
+def get_media_duration(file_path: str | Path) -> float | None:
     """
     Get the duration of a media file in seconds via ffprobe.
 
@@ -914,12 +1005,17 @@ def get_media_duration(file_path: str | Path) -> Optional[float]:
     try:
         result = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-print_format", "json",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 str(file_path),
             ],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if result.returncode != 0:
             return None

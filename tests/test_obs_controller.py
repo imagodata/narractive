@@ -1,4 +1,5 @@
 """Tests for OBSController (config, scenes, compatibility methods)."""
+
 from __future__ import annotations
 
 import pytest
@@ -15,12 +16,14 @@ class TestOBSController:
         assert obs.scenes == {}
 
     def test_init_custom_config(self):
-        obs = OBSController({
-            "host": "192.168.1.10",
-            "port": 5555,
-            "password": "secret",
-            "scenes": {"main": "Main", "intro_scene": "Intro"},
-        })
+        obs = OBSController(
+            {
+                "host": "192.168.1.10",
+                "port": 5555,
+                "password": "secret",
+                "scenes": {"main": "Main", "intro_scene": "Intro"},
+            }
+        )
         assert obs.host == "192.168.1.10"
         assert obs.port == 5555
         assert obs.scenes["main"] == "Main"

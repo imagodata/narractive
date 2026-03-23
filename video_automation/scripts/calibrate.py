@@ -28,7 +28,6 @@ from __future__ import annotations
 import argparse
 import copy
 import sys
-import threading
 import time
 from pathlib import Path
 
@@ -86,10 +85,26 @@ GROUPS: dict[str, dict] = {
             ("exploring_zone", "coin BAS-DROITE de la Zone d'Exploration", "br"),
             ("tab_exploring", "l'onglet EXPLORING / EXPLORATION", "point"),
             ("exploring_layer_combo", "le combo COUCHE dans la Zone d'Exploration", "point"),
-            ("exploring_feature_selector", "le combo ENTITE / FEATURE dans la Zone d'Exploration", "point"),
-            ("exploring_display_field_combo", "le combo CHAMP D'AFFICHAGE dans la Zone d'Exploration", "point"),
-            ("exploring_feature_prev_btn", "le bouton PRECEDENT (fleche gauche) du selecteur d'entites", "point"),
-            ("exploring_feature_next_btn", "le bouton SUIVANT (fleche droite) du selecteur d'entites", "point"),
+            (
+                "exploring_feature_selector",
+                "le combo ENTITE / FEATURE dans la Zone d'Exploration",
+                "point",
+            ),
+            (
+                "exploring_display_field_combo",
+                "le combo CHAMP D'AFFICHAGE dans la Zone d'Exploration",
+                "point",
+            ),
+            (
+                "exploring_feature_prev_btn",
+                "le bouton PRECEDENT (fleche gauche) du selecteur d'entites",
+                "point",
+            ),
+            (
+                "exploring_feature_next_btn",
+                "le bouton SUIVANT (fleche droite) du selecteur d'entites",
+                "point",
+            ),
         ],
     },
     "sidebar": {
@@ -120,7 +135,11 @@ GROUPS: dict[str, dict] = {
         "label": "Widgets FILTERING (sections depliables)",
         "desc": "IMPORTANT : depliez chaque section AVANT de calibrer !",
         "targets": [
-            ("btn_toggle_layers_to_filter", "le pushbutton LAYERS TO FILTER (barre laterale gauche)", "point"),
+            (
+                "btn_toggle_layers_to_filter",
+                "le pushbutton LAYERS TO FILTER (barre laterale gauche)",
+                "point",
+            ),
             ("target_layer_combo", "[depliez LAYERS TO FILTER !] le combo COUCHE CIBLE", "point"),
             ("btn_toggle_geometric_predicates", "le pushbutton GEOMETRIC PREDICATES", "point"),
             ("predicate_combo", "[depliez GEOMETRIC PREDICATES !] le combo PREDICAT", "point"),
@@ -157,14 +176,30 @@ GROUPS: dict[str, dict] = {
         "desc": "Chaque element necessite d'ouvrir un menu AVANT la capture.",
         "timer": 5,
         "targets": [
-            ("menu_extensions_manage", "l'entree GERER LES EXTENSIONS", "point",
-             "Ouvrez le menu EXTENSIONS dans la barre de menu"),
-            ("menu_settings_options", "l'entree OPTIONS...", "point",
-             "Ouvrez le menu PARAMETRES / SETTINGS dans la barre de menu"),
-            ("menu_view_panels", "le sous-menu PANNEAUX", "point",
-             "Ouvrez le menu VUE / VIEW dans la barre de menu"),
-            ("menu_view_panels_log", "l'entree MESSAGES DE LOG", "point",
-             "Ouvrez VUE > PANNEAUX (sous-menu deja ouvert)"),
+            (
+                "menu_extensions_manage",
+                "l'entree GERER LES EXTENSIONS",
+                "point",
+                "Ouvrez le menu EXTENSIONS dans la barre de menu",
+            ),
+            (
+                "menu_settings_options",
+                "l'entree OPTIONS...",
+                "point",
+                "Ouvrez le menu PARAMETRES / SETTINGS dans la barre de menu",
+            ),
+            (
+                "menu_view_panels",
+                "le sous-menu PANNEAUX",
+                "point",
+                "Ouvrez le menu VUE / VIEW dans la barre de menu",
+            ),
+            (
+                "menu_view_panels_log",
+                "l'entree MESSAGES DE LOG",
+                "point",
+                "Ouvrez VUE > PANNEAUX (sous-menu deja ouvert)",
+            ),
         ],
     },
     "toolbar": {
@@ -193,7 +228,11 @@ GROUPS: dict[str, dict] = {
         "prereq": "Ouvrez le dialogue : Parametres > Options",
         "targets": [
             ("settings_options_general_tab", "l'onglet GENERAL dans le panneau gauche", "point"),
-            ("settings_options_theme_dropdown", "le menu deroulant THEME UI (section Interface utilisateur)", "point"),
+            (
+                "settings_options_theme_dropdown",
+                "le menu deroulant THEME UI (section Interface utilisateur)",
+                "point",
+            ),
         ],
     },
     "about_config": {
@@ -204,7 +243,11 @@ GROUPS: dict[str, dict] = {
         "targets": [
             ("about_config_tab", "l'onglet CONFIG dans le dialogue About FilterMate", "point"),
             ("about_config_language_field", "le champ LANGUAGE dans le TreeView config", "point"),
-            ("about_config_feedback_level_field", "le champ FEEDBACK_LEVEL dans le TreeView config", "point"),
+            (
+                "about_config_feedback_level_field",
+                "le champ FEEDBACK_LEVEL dans le TreeView config",
+                "point",
+            ),
         ],
     },
     "log_panel": {
@@ -213,24 +256,48 @@ GROUPS: dict[str, dict] = {
         "timer": 5,
         "prereq": "Ouvrez le panneau : Vue > Panneaux > Messages de log",
         "targets": [
-            ("log_panel_filtermate_tab", "l'onglet FilterMate dans le panneau Log Messages", "point"),
+            (
+                "log_panel_filtermate_tab",
+                "l'onglet FilterMate dans le panneau Log Messages",
+                "point",
+            ),
         ],
     },
     "layer_panel": {
         "label": "Panneau Couches (Layers)",
         "desc": "Checkboxes de visibilite et noms des couches dans le panneau Layers",
         "targets": [
-            ("layer_panel_visibility_departements", "la checkbox de visibilite de la couche DEPARTEMENTS", "point"),
-            ("layer_panel_visibility_communes", "la checkbox de visibilite de la couche COMMUNES", "point"),
-            ("layer_panel_name_departements", "le NOM 'departements' (texte) dans le panneau Layers", "point"),
-            ("layer_panel_name_communes", "le NOM 'communes' (texte) dans le panneau Layers", "point"),
+            (
+                "layer_panel_visibility_departements",
+                "la checkbox de visibilite de la couche DEPARTEMENTS",
+                "point",
+            ),
+            (
+                "layer_panel_visibility_communes",
+                "la checkbox de visibilite de la couche COMMUNES",
+                "point",
+            ),
+            (
+                "layer_panel_name_departements",
+                "le NOM 'departements' (texte) dans le panneau Layers",
+                "point",
+            ),
+            (
+                "layer_panel_name_communes",
+                "le NOM 'communes' (texte) dans le panneau Layers",
+                "point",
+            ),
         ],
     },
     "filtering_sync": {
         "label": "Bouton synchro couche source",
         "desc": "Le pushbutton Auto Current Layer (synchro avec l'arbre des couches)",
         "targets": [
-            ("btn_auto_current_layer", "le pushbutton AUTO CURRENT LAYER (a gauche du combo couche source, onglet FILTERING)", "point"),
+            (
+                "btn_auto_current_layer",
+                "le pushbutton AUTO CURRENT LAYER (a gauche du combo couche source, onglet FILTERING)",
+                "point",
+            ),
         ],
     },
 }
@@ -242,6 +309,7 @@ for group in GROUPS.values():
 
 
 # ── Config I/O ────────────────────────────────────────────────────────────
+
 
 def load_config(config_path: Path) -> dict:
     with open(config_path, encoding="utf-8") as f:
@@ -255,10 +323,12 @@ def save_config(config: dict, config_path: Path) -> None:
 
 # ── Mouse helpers ─────────────────────────────────────────────────────────
 
+
 def _get_pyautogui():
     """Import pyautogui with error handling."""
     try:
         import pyautogui
+
         return pyautogui
     except ImportError:
         return None
@@ -274,10 +344,13 @@ def get_mouse_position() -> tuple[int, int] | None:
 
 # ── Visual feedback helpers ──────────────────────────────────────────────
 
-def _show_position_circle(pag, cx: int, cy: int, radius: int = 25,
-                          loops: int = 2, duration: float = 0.8) -> None:
+
+def _show_position_circle(
+    pag, cx: int, cy: int, radius: int = 25, loops: int = 2, duration: float = 0.8
+) -> None:
     """Draw a circle around a point to highlight it visually."""
     import math
+
     steps = 30 * loops
     step_delay = duration / steps
     for i in range(steps + 1):
@@ -289,8 +362,7 @@ def _show_position_circle(pag, cx: int, cy: int, radius: int = 25,
     pag.moveTo(cx, cy, duration=0.1, _pause=False)
 
 
-def _show_position_rect(pag, x: int, y: int, w: int, h: int,
-                        duration: float = 0.8) -> None:
+def _show_position_rect(pag, x: int, y: int, w: int, h: int, duration: float = 0.8) -> None:
     """Trace the outline of a rectangle to highlight it visually."""
     step_dur = duration / 4
     pag.moveTo(x, y, duration=0.1, _pause=False)
@@ -302,8 +374,7 @@ def _show_position_rect(pag, x: int, y: int, w: int, h: int,
     pag.moveTo(x + w // 2, y + h // 2, duration=0.1, _pause=False)
 
 
-def _show_position_cross(pag, cx: int, cy: int, size: int = 20,
-                         duration: float = 0.4) -> None:
+def _show_position_cross(pag, cx: int, cy: int, size: int = 20, duration: float = 0.4) -> None:
     """Draw a + cross at a point to highlight it visually."""
     step_dur = duration / 4
     pag.moveTo(cx - size, cy, duration=0.05, _pause=False)
@@ -341,8 +412,7 @@ def show_position(val: dict | None) -> None:
 
     try:
         if "width" in val and val.get("width", 0) > 0:
-            _show_position_rect(pag, val["x"], val["y"],
-                                val["width"], val["height"], duration=0.6)
+            _show_position_rect(pag, val["x"], val["y"], val["width"], val["height"], duration=0.6)
             cx = val["x"] + val["width"] // 2
             cy = val["y"] + val["height"] // 2
             _show_position_cross(pag, cx, cy, size=15, duration=0.3)
@@ -353,7 +423,7 @@ def show_position(val: dict | None) -> None:
             _show_position_circle(pag, cx, cy, radius=25, loops=1, duration=0.5)
     except Exception:
         # FailSafeException (mouse in corner) or other pyautogui errors
-        print(f"       ! Visualisation impossible (souris dans un coin ? deplacez-la)")
+        print("       ! Visualisation impossible (souris dans un coin ? deplacez-la)")
 
 
 def cmd_show_all(config_path: Path) -> None:
@@ -376,7 +446,7 @@ def cmd_show_all(config_path: Path) -> None:
     print("  ENTREE = suivant | q = quitter")
     print("=" * 65)
 
-    for group_id, group in GROUPS.items():
+    for _group_id, group in GROUPS.items():
         group_keys = []
         for target in group["targets"]:
             if target[0] not in group_keys:
@@ -392,7 +462,7 @@ def cmd_show_all(config_path: Path) -> None:
             prereq_text = group_prereq or group.get("desc", "")
             if prereq_text:
                 print(f"       >> {prereq_text}")
-                print(f"       Appuyez sur ENTREE quand c'est pret (s = passer)")
+                print("       Appuyez sur ENTREE quand c'est pret (s = passer)")
                 ready = input("       pret ? ").strip().lower()
                 if ready == "q":
                     print("  Visualisation terminee.")
@@ -430,8 +500,10 @@ def record_position(prompt: str, current_value: dict | None = None) -> tuple[int
     print(f"\n  >> {prompt}")
     if current_value:
         if "width" in current_value:
-            print(f"     Actuel : x={current_value['x']}, y={current_value['y']}, "
-                  f"w={current_value['width']}, h={current_value['height']}")
+            print(
+                f"     Actuel : x={current_value['x']}, y={current_value['y']}, "
+                f"w={current_value['width']}, h={current_value['height']}"
+            )
         else:
             print(f"     Actuel : x={current_value['x']}, y={current_value['y']}")
 
@@ -473,6 +545,7 @@ def record_position(prompt: str, current_value: dict | None = None) -> tuple[int
 
 # ── Display helpers ───────────────────────────────────────────────────────
 
+
 def _format_value(val: dict) -> str:
     """Format a region dict for display."""
     if "width" in val:
@@ -500,6 +573,7 @@ def _status_icon(val: dict | None) -> str:
 
 
 # ── Core commands ─────────────────────────────────────────────────────────
+
 
 def cmd_list(config_path: Path) -> None:
     """Print current calibration data, grouped and with status."""
@@ -535,7 +609,7 @@ def cmd_list(config_path: Path) -> None:
     # Show any extra keys not in groups
     extra = set(regions.keys()) - known_keys
     if extra:
-        print(f"\n  [extra] Autres elements")
+        print("\n  [extra] Autres elements")
         print(f"  {'─' * 60}")
         for key in sorted(extra):
             val = regions[key]
@@ -627,18 +701,37 @@ def cmd_validate(config_path: Path) -> None:
 
         # Check that dock-internal elements are within dock bounds
         dock_elements = [
-            "tab_filtering", "tab_exploring", "tab_exporting", "tab_configuration",
-            "source_layer_combo", "filter_button", "undo_button",
-            "redo_button", "unfilter_button", "export_button", "about_button",
-            "badge_backend", "badge_favorites",
-            "exploring_layer_combo", "exploring_feature_selector",
+            "tab_filtering",
+            "tab_exploring",
+            "tab_exporting",
+            "tab_configuration",
+            "source_layer_combo",
+            "filter_button",
+            "undo_button",
+            "redo_button",
+            "unfilter_button",
+            "export_button",
+            "about_button",
+            "badge_backend",
+            "badge_favorites",
+            "exploring_layer_combo",
+            "exploring_feature_selector",
             "exploring_display_field_combo",
-            "exploring_feature_prev_btn", "exploring_feature_next_btn",
-            "sidebar_identify", "sidebar_zoom", "sidebar_select",
-            "sidebar_track", "sidebar_link", "sidebar_reset",
-            "btn_toggle_layers_to_filter", "btn_toggle_geometric_predicates",
-            "btn_toggle_buffer", "target_layer_combo", "predicate_combo",
-            "buffer_enable_checkbox", "buffer_value_spinbox",
+            "exploring_feature_prev_btn",
+            "exploring_feature_next_btn",
+            "sidebar_identify",
+            "sidebar_zoom",
+            "sidebar_select",
+            "sidebar_track",
+            "sidebar_link",
+            "sidebar_reset",
+            "btn_toggle_layers_to_filter",
+            "btn_toggle_geometric_predicates",
+            "btn_toggle_buffer",
+            "target_layer_combo",
+            "predicate_combo",
+            "buffer_enable_checkbox",
+            "buffer_value_spinbox",
             "btn_auto_current_layer",
         ]
         for key in dock_elements:
@@ -647,10 +740,7 @@ def cmd_validate(config_path: Path) -> None:
                 continue
             vx, vy = val["x"], val["y"]
             if vx < dx - 10 or vx > dr + 10 or vy < dy - 10 or vy > db + 10:
-                errors.append(
-                    f"{key} ({vx}, {vy}) est EN DEHORS du dock "
-                    f"({dx},{dy})-({dr},{db})"
-                )
+                errors.append(f"{key} ({vx}, {vy}) est EN DEHORS du dock ({dx},{dy})-({dr},{db})")
 
         # Check vertical ordering within dock
         order_checks = [
@@ -672,17 +762,19 @@ def cmd_validate(config_path: Path) -> None:
 
         # Check sidebar buttons are vertically ordered
         sidebar_keys = [
-            "sidebar_identify", "sidebar_zoom", "sidebar_select",
-            "sidebar_track", "sidebar_link", "sidebar_reset",
+            "sidebar_identify",
+            "sidebar_zoom",
+            "sidebar_select",
+            "sidebar_track",
+            "sidebar_link",
+            "sidebar_reset",
         ]
         prev_y = 0
         for key in sidebar_keys:
             val = regions.get(key)
             if val and _is_calibrated(val):
                 if val["y"] <= prev_y:
-                    warnings.append(
-                        f"Sidebar: {key} y={val['y']} devrait etre > {prev_y}"
-                    )
+                    warnings.append(f"Sidebar: {key} y={val['y']} devrait etre > {prev_y}")
                 prev_y = val["y"]
 
         # Check sidebar buttons have similar x
@@ -701,8 +793,12 @@ def cmd_validate(config_path: Path) -> None:
 
         # Check action bar buttons have similar y
         action_keys = [
-            "filter_button", "undo_button", "redo_button",
-            "unfilter_button", "export_button", "about_button",
+            "filter_button",
+            "undo_button",
+            "redo_button",
+            "unfilter_button",
+            "export_button",
+            "about_button",
         ]
         action_ys = []
         for key in action_keys:
@@ -751,11 +847,8 @@ def cmd_validate(config_path: Path) -> None:
     if toolbar_val and _is_calibrated(toolbar_val):
         for key in menu_bar_keys:
             val = regions.get(key)
-            if val and _is_calibrated(val):
-                if val["y"] >= toolbar_val["y"]:
-                    errors.append(
-                        f"{key} y={val['y']} est EN DESSOUS de toolbar y={toolbar_val['y']}"
-                    )
+            if val and _is_calibrated(val) and val["y"] >= toolbar_val["y"]:
+                errors.append(f"{key} y={val['y']} est EN DESSOUS de toolbar y={toolbar_val['y']}")
 
     # Check dropdown items are below their parent menu
     dropdown_checks = [
@@ -766,16 +859,26 @@ def cmd_validate(config_path: Path) -> None:
     for parent_key, child_key, desc in dropdown_checks:
         parent = regions.get(parent_key)
         child = regions.get(child_key)
-        if parent and child and _is_calibrated(parent) and _is_calibrated(child):
-            if child["y"] <= parent["y"]:
-                errors.append(
-                    f"{desc}: {child_key} y={child['y']} devrait etre "
-                    f"en dessous de {parent_key} y={parent['y']}"
-                )
+        if (
+            parent
+            and child
+            and _is_calibrated(parent)
+            and _is_calibrated(child)
+            and child["y"] <= parent["y"]
+        ):
+            errors.append(
+                f"{desc}: {child_key} y={child['y']} devrait etre "
+                f"en dessous de {parent_key} y={parent['y']}"
+            )
 
     # Check toolbar icon is within toolbar area
     toolbar_icon = regions.get("filtermate_toolbar_icon")
-    if toolbar_icon and toolbar_val and _is_calibrated(toolbar_icon) and _is_calibrated(toolbar_val):
+    if (
+        toolbar_icon
+        and toolbar_val
+        and _is_calibrated(toolbar_icon)
+        and _is_calibrated(toolbar_val)
+    ):
         ty = toolbar_val["y"]
         tb = ty + toolbar_val.get("height", 168)
         if toolbar_icon["y"] < ty - 5 or toolbar_icon["y"] > tb + 5:
@@ -789,7 +892,9 @@ def cmd_validate(config_path: Path) -> None:
         if val.get("x", 0) == 0 and val.get("y", 0) == 0:
             if "width" in val:
                 if val.get("width", 0) == 0:
-                    warnings.append(f"{key} : position (0, 0) avec taille 0 — probablement non calibre")
+                    warnings.append(
+                        f"{key} : position (0, 0) avec taille 0 — probablement non calibre"
+                    )
             else:
                 warnings.append(f"{key} : position (0, 0) — probablement non calibre")
 
@@ -820,7 +925,7 @@ def cmd_edit(config_path: Path, region_key: str) -> None:
     if val:
         print(f"  Valeur actuelle : {_format_value(val)}")
     else:
-        print(f"  (non defini)")
+        print("  (non defini)")
 
     if val and "width" in val:
         print("  Placez la souris sur le coin HAUT-GAUCHE, puis ENTREE")
@@ -829,7 +934,8 @@ def cmd_edit(config_path: Path, region_key: str) -> None:
         print("  Placez la souris sur le coin BAS-DROITE, puis ENTREE")
         br_x, br_y = record_position("coin BAS-DROITE", None)
         regions[region_key] = {
-            "x": tl_x, "y": tl_y,
+            "x": tl_x,
+            "y": tl_y,
             "width": max(1, br_x - tl_x),
             "height": max(1, br_y - tl_y),
         }
@@ -859,7 +965,9 @@ def cmd_calibrate_group(config_path: Path, group_id: str) -> None:
     print()
 
     _calibrate_targets(
-        config, regions, group["targets"],
+        config,
+        regions,
+        group["targets"],
         config_path=config_path,
         group_timer=group.get("timer", 0),
         group_prereq=group.get("prereq", ""),
@@ -891,7 +999,7 @@ def cmd_calibrate_all(config_path: Path) -> None:
     print()
 
     total_groups = len(GROUPS)
-    for idx, (group_id, group) in enumerate(GROUPS.items(), 1):
+    for idx, (_group_id, group) in enumerate(GROUPS.items(), 1):
         print()
         print(f"  ━━━ [{idx}/{total_groups}] {group['label']} ━━━")
         if group["desc"]:
@@ -901,7 +1009,9 @@ def cmd_calibrate_all(config_path: Path) -> None:
         undo_stack.append(copy.deepcopy(regions))
 
         _calibrate_targets(
-            config, regions, group["targets"],
+            config,
+            regions,
+            group["targets"],
             config_path=config_path,
             group_timer=group.get("timer", 0),
             group_prereq=group.get("prereq", ""),
@@ -914,10 +1024,14 @@ def cmd_calibrate_all(config_path: Path) -> None:
     print()
 
 
-def _calibrate_targets(config: dict, regions: dict, targets: list,
-                       config_path: Path | None = None,
-                       group_timer: int = 0,
-                       group_prereq: str = "") -> None:
+def _calibrate_targets(
+    config: dict,
+    regions: dict,
+    targets: list,
+    config_path: Path | None = None,
+    group_timer: int = 0,
+    group_prereq: str = "",
+) -> None:
     """Calibrate a list of targets into regions dict.
 
     Auto-saves to config_path after each real change.
@@ -935,9 +1049,9 @@ def _calibrate_targets(config: dict, regions: dict, targets: list,
 
     # Show group prereq once if present
     if group_prereq:
-        print(f"\n  ┌─ PREREQUIS ──────────────────────────────────")
+        print("\n  ┌─ PREREQUIS ──────────────────────────────────")
         print(f"  │  {group_prereq}")
-        print(f"  └──────────────────────────────────────────────")
+        print("  └──────────────────────────────────────────────")
 
     def _auto_save(region_key: str, new_val: dict) -> None:
         """Save only if value actually changed."""
@@ -945,7 +1059,7 @@ def _calibrate_targets(config: dict, regions: dict, targets: list,
         regions[region_key] = new_val
         if config_path and new_val != old_val:
             save_config(config, config_path)
-            print(f"     (sauvegarde automatique)")
+            print("     (sauvegarde automatique)")
 
     for target in targets:
         region_key, prompt, kind = target[0], target[1], target[2]
@@ -957,25 +1071,25 @@ def _calibrate_targets(config: dict, regions: dict, targets: list,
         # show prereq, wait for user, countdown, then capture mouse directly
         auto_capture = False
         if target_prereq:
-            print(f"\n     ┌─ PREREQUIS ─────────────────────────────")
+            print("\n     ┌─ PREREQUIS ─────────────────────────────")
             print(f"     │  {target_prereq}")
             print(f"     │  Puis placez la souris sur : {prompt}")
-            print(f"     │  Appuyez sur ENTREE quand c'est pret (s = passer)")
-            print(f"     └─────────────────────────────────────────")
+            print("     │  Appuyez sur ENTREE quand c'est pret (s = passer)")
+            print("     └─────────────────────────────────────────")
             ready = input("     pret ? ").strip().lower()
             if ready == "s":
-                print(f"     (passe)")
+                print("     (passe)")
                 continue
             if group_timer > 0:
                 _countdown(group_timer, "Capture dans")
                 auto_capture = True
         elif group_timer > 0:
             print(f"\n  >> {prompt}")
-            print(f"     Placez la souris sur l'element.")
-            print(f"     Appuyez sur ENTREE quand c'est pret (s = passer)")
+            print("     Placez la souris sur l'element.")
+            print("     Appuyez sur ENTREE quand c'est pret (s = passer)")
             ready = input("     pret ? ").strip().lower()
             if ready == "s":
-                print(f"     (passe)")
+                print("     (passe)")
                 continue
             _countdown(group_timer, "Capture dans")
             auto_capture = True
@@ -987,7 +1101,7 @@ def _calibrate_targets(config: dict, regions: dict, targets: list,
                 x, y = pos
                 print(f"     + Enregistre : ({x}, {y})")
             else:
-                print(f"     ! pyautogui non disponible, saisie manuelle requise")
+                print("     ! pyautogui non disponible, saisie manuelle requise")
                 x, y = record_position(prompt, current)
         elif kind in ("tl", "br"):
             x, y = record_position(prompt, current)
@@ -1013,8 +1127,9 @@ def _calibrate_targets(config: dict, regions: dict, targets: list,
             _auto_save(region_key, new_val)
 
 
-def _review_single(key: str, val: dict | None, regions: dict,
-                   timer: int = 0, prereq: str = "") -> tuple[str, bool]:
+def _review_single(
+    key: str, val: dict | None, regions: dict, timer: int = 0, prereq: str = ""
+) -> tuple[str, bool]:
     """Review a single region. Returns (action, modified).
 
     action: 'continue' | 'quit'
@@ -1030,10 +1145,10 @@ def _review_single(key: str, val: dict | None, regions: dict,
 
     # Prerequisite + countdown before moving cursor
     if prereq and timer > 0 and val and _is_calibrated(val):
-        print(f"       ┌─ PREREQUIS ──────────────────────────────────")
+        print("       ┌─ PREREQUIS ──────────────────────────────────")
         print(f"       │  {prereq}")
-        print(f"       │  Appuyez sur ENTREE quand c'est pret (s = passer)")
-        print(f"       └──────────────────────────────────────────────")
+        print("       │  Appuyez sur ENTREE quand c'est pret (s = passer)")
+        print("       └──────────────────────────────────────────────")
         ready = input("       pret ? ").strip().lower()
         if ready == "q":
             return "quit", False
@@ -1041,7 +1156,7 @@ def _review_single(key: str, val: dict | None, regions: dict,
             _countdown(timer, "Le curseur se deplace dans")
             show_position(val)
         else:
-            print(f"       (visualisation sautee)")
+            print("       (visualisation sautee)")
     elif timer > 0 and val and _is_calibrated(val):
         # Timer without specific prereq text
         _countdown(timer, "Le curseur se deplace dans")
@@ -1058,7 +1173,7 @@ def _review_single(key: str, val: dict | None, regions: dict,
     if raw.lower() == "d":
         if key in regions:
             del regions[key]
-            print(f"       - Supprime")
+            print("       - Supprime")
         return "continue", True
 
     if raw == "":
@@ -1070,8 +1185,10 @@ def _review_single(key: str, val: dict | None, regions: dict,
             x, y = pos
             if val and "width" in val:
                 regions[key] = {
-                    "x": x, "y": y,
-                    "width": val["width"], "height": val["height"],
+                    "x": x,
+                    "y": y,
+                    "width": val["width"],
+                    "height": val["height"],
                 }
             else:
                 regions[key] = {"x": x, "y": y}
@@ -1088,8 +1205,10 @@ def _review_single(key: str, val: dict | None, regions: dict,
     if len(parts) >= 4 and val and "width" in val:
         try:
             regions[key] = {
-                "x": int(parts[0]), "y": int(parts[1]),
-                "width": int(parts[2]), "height": int(parts[3]),
+                "x": int(parts[0]),
+                "y": int(parts[1]),
+                "width": int(parts[2]),
+                "height": int(parts[3]),
             }
             print(f"       + Modifie : {_format_value(regions[key])}")
             show_position(regions[key])
@@ -1101,8 +1220,10 @@ def _review_single(key: str, val: dict | None, regions: dict,
             x, y = int(parts[0]), int(parts[1])
             if val and "width" in val:
                 regions[key] = {
-                    "x": x, "y": y,
-                    "width": val["width"], "height": val["height"],
+                    "x": x,
+                    "y": y,
+                    "width": val["width"],
+                    "height": val["height"],
                 }
             else:
                 regions[key] = {"x": x, "y": y}
@@ -1149,7 +1270,7 @@ def cmd_review(config_path: Path) -> None:
     modified = 0
     total = 0
 
-    for group_id, group in GROUPS.items():
+    for _group_id, group in GROUPS.items():
         # Build unique keys + per-element prereqs
         group_keys = []
         element_prereqs: dict[str, str] = {}
@@ -1171,10 +1292,10 @@ def cmd_review(config_path: Path) -> None:
         # For groups with a group-level prereq (not per-element),
         # show the prereq once and wait before starting
         if group_prereq and group_timer > 0:
-            print(f"\n       ┌─ PREREQUIS GROUPE ────────────────────────────")
+            print("\n       ┌─ PREREQUIS GROUPE ────────────────────────────")
             print(f"       │  {group_prereq}")
-            print(f"       │  Appuyez sur ENTREE quand c'est pret (s = passer le groupe)")
-            print(f"       └──────────────────────────────────────────────")
+            print("       │  Appuyez sur ENTREE quand c'est pret (s = passer le groupe)")
+            print("       └──────────────────────────────────────────────")
             ready = input("       pret ? ").strip().lower()
             if ready == "q":
                 save_config(config, config_path)
@@ -1182,7 +1303,7 @@ def cmd_review(config_path: Path) -> None:
                 return
             if ready == "s":
                 total += len(group_keys)
-                print(f"       (groupe saute)")
+                print("       (groupe saute)")
                 continue
 
         for key in group_keys:
@@ -1193,13 +1314,16 @@ def cmd_review(config_path: Path) -> None:
             # If group has a group-level prereq, don't repeat per element
             effective_timer = group_timer if (elem_prereq or not group_prereq) else 0
             action, changed = _review_single(
-                key, val, regions,
-                timer=effective_timer, prereq=elem_prereq,
+                key,
+                val,
+                regions,
+                timer=effective_timer,
+                prereq=elem_prereq,
             )
             if changed:
                 modified += 1
                 save_config(config, config_path)
-                print(f"       (sauvegarde automatique)")
+                print("       (sauvegarde automatique)")
             if action == "quit":
                 save_config(config, config_path)
                 print(f"\n  Revue interrompue. {modified} modification(s) sauvegardee(s).")
@@ -1213,7 +1337,7 @@ def cmd_review(config_path: Path) -> None:
 
     extra_keys = sorted(set(regions.keys()) - known_keys)
     if extra_keys:
-        print(f"\n  ━━━ Elements supplementaires (hors groupes) ━━━")
+        print("\n  ━━━ Elements supplementaires (hors groupes) ━━━")
         for key in extra_keys:
             total += 1
             val = regions[key]
@@ -1221,7 +1345,7 @@ def cmd_review(config_path: Path) -> None:
             if changed:
                 modified += 1
                 save_config(config, config_path)
-                print(f"       (sauvegarde automatique)")
+                print("       (sauvegarde automatique)")
             if action == "quit":
                 break
 
@@ -1332,6 +1456,7 @@ def cmd_interactive_menu(config_path: Path) -> None:
 
 # ── CLI entry point ───────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Outil de calibration interactif pour FilterMate Video Automation.",
@@ -1347,18 +1472,32 @@ Exemples:
         """,
     )
     parser.add_argument(
-        "--config", type=Path, default=DEFAULT_CONFIG,
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG,
         help="Chemin vers config.yaml (defaut: ../config.yaml)",
     )
     parser.add_argument("--list", action="store_true", help="Afficher les positions actuelles")
     parser.add_argument("--reset", action="store_true", help="Remettre toutes les positions a zero")
     parser.add_argument("--group", type=str, metavar="ID", help="Calibrer un groupe specifique")
-    parser.add_argument("--edit", type=str, metavar="KEY", help="Modifier une position manuellement")
-    parser.add_argument("--live", action="store_true", help="Mode live (position souris en temps reel)")
-    parser.add_argument("--validate", action="store_true", help="Verifier la coherence des positions")
+    parser.add_argument(
+        "--edit", type=str, metavar="KEY", help="Modifier une position manuellement"
+    )
+    parser.add_argument(
+        "--live", action="store_true", help="Mode live (position souris en temps reel)"
+    )
+    parser.add_argument(
+        "--validate", action="store_true", help="Verifier la coherence des positions"
+    )
     parser.add_argument("--all", action="store_true", help="Calibrer tout (session complete)")
-    parser.add_argument("--review", action="store_true", help="Passer en revue toutes les positions (avec visualisation)")
-    parser.add_argument("--show", action="store_true", help="Visualiser toutes les positions (curseur sur ecran)")
+    parser.add_argument(
+        "--review",
+        action="store_true",
+        help="Passer en revue toutes les positions (avec visualisation)",
+    )
+    parser.add_argument(
+        "--show", action="store_true", help="Visualiser toutes les positions (curseur sur ecran)"
+    )
 
     args = parser.parse_args()
 

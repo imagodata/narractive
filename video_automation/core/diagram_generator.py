@@ -30,14 +30,12 @@ import base64
 import json
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +101,7 @@ class DiagramGenerator:
     def generate_all_diagrams(
         self,
         definitions: dict,
-        output_dir: Optional[str | Path] = None,
+        output_dir: str | Path | None = None,
     ) -> dict[str, Path]:
         """
         Batch-generate HTML files for all diagram definitions.
@@ -140,8 +138,8 @@ class DiagramGenerator:
         self,
         html_path: str | Path,
         png_path: str | Path,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        width: int | None = None,
+        height: int | None = None,
         wait_ms: int = 2000,
     ) -> Path:
         """
@@ -190,7 +188,7 @@ class DiagramGenerator:
                 page.screenshot(path=str(png_path), full_page=False)
                 browser.close()
             logger.info("Rendered PNG: %s", png_path)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Playwright rendering failed for %s: %s", html_path.name, exc)
             raise
 
@@ -199,7 +197,7 @@ class DiagramGenerator:
     def render_all_to_png(
         self,
         html_paths: dict[str, Path],
-        output_dir: Optional[str | Path] = None,
+        output_dir: str | Path | None = None,
     ) -> dict[str, Path]:
         """
         Batch render all HTML diagrams to PNG.
@@ -216,7 +214,7 @@ class DiagramGenerator:
             try:
                 self.render_to_png(html_path, png_path)
                 results[diagram_id] = png_path
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.error("Failed to render '%s': %s", diagram_id, exc)
         return results
 
@@ -256,26 +254,20 @@ class DiagramGenerator:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        encoded = base64.urlsafe_b64encode(
-            mermaid_code.strip().encode("utf-8")
-        ).decode("ascii")
+        encoded = base64.urlsafe_b64encode(mermaid_code.strip().encode("utf-8")).decode("ascii")
         bg_hex = self.bg_color.lstrip("#")
-        url = (
-            f"https://mermaid.ink/img/{encoded}"
-            f"?type=png&theme={self.theme}&bgColor=!{bg_hex}"
-        )
+        url = f"https://mermaid.ink/img/{encoded}?type=png&theme={self.theme}&bgColor=!{bg_hex}"
 
         for attempt in range(retries + 1):
             try:
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "Narractive/2.0"}
-                )
+                req = urllib.request.Request(url, headers={"User-Agent": "Narractive/2.0"})
                 resp = urllib.request.urlopen(req, timeout=30)
                 data = resp.read()
 
                 if len(data) < 100 or data[:4] != b"\x89PNG":
                     logger.warning(
-                        "mermaid.ink: response not a valid PNG (%d bytes)", len(data),
+                        "mermaid.ink: response not a valid PNG (%d bytes)",
+                        len(data),
                     )
                     if attempt < retries:
                         time.sleep(1)
@@ -285,7 +277,8 @@ class DiagramGenerator:
                 output_path.write_bytes(data)
                 logger.info(
                     "mermaid.ink rendered: %s (%s bytes)",
-                    output_path.name, f"{len(data):,}",
+                    output_path.name,
+                    f"{len(data):,}",
                 )
                 if rate_limit > 0:
                     time.sleep(rate_limit)
@@ -296,7 +289,9 @@ class DiagramGenerator:
                     logger.debug("mermaid.ink attempt %d failed: %s", attempt + 1, exc)
                     time.sleep(1)
                     continue
-                raise RuntimeError(f"mermaid.ink API error after {retries + 1} attempts: {exc}")
+                raise RuntimeError(
+                    f"mermaid.ink API error after {retries + 1} attempts: {exc}"
+                ) from exc
 
         raise RuntimeError("mermaid.ink: exhausted retries")
 
@@ -351,13 +346,20 @@ class DiagramGenerator:
 
             cmd = [
                 "mmdc",
-                "-i", str(mmd_path),
-                "-o", str(output_path),
-                "-w", str(self.width),
-                "-H", str(self.height),
-                "-b", self.bg_color,
-                "-c", config_path,
-                "--scale", "2",
+                "-i",
+                str(mmd_path),
+                "-o",
+                str(output_path),
+                "-w",
+                str(self.width),
+                "-H",
+                str(self.height),
+                "-b",
+                self.bg_color,
+                "-c",
+                config_path,
+                "--scale",
+                "2",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
@@ -384,6 +386,7 @@ class DiagramGenerator:
         # Check Playwright
         try:
             from playwright.sync_api import sync_playwright  # type: ignore  # noqa: F401
+
             return "playwright"
         except ImportError:
             pass
@@ -392,7 +395,9 @@ class DiagramGenerator:
         try:
             result = subprocess.run(
                 ["mmdc", "--version"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             if result.returncode == 0:
                 return "mmdc"
@@ -406,7 +411,7 @@ class DiagramGenerator:
         self,
         mermaid_code: str,
         output_path: str | Path,
-        backend: Optional[str] = None,
+        backend: str | None = None,
     ) -> Path:
         """
         Render Mermaid code to PNG using the best available backend.
@@ -478,8 +483,7 @@ class DiagramGenerator:
         if _TEMPLATE_PATH.exists():
             template = _TEMPLATE_PATH.read_text(encoding="utf-8")
             return (
-                template
-                .replace("{{TITLE}}", title)
+                template.replace("{{TITLE}}", title)
                 .replace("{{SUBTITLE}}", self.subtitle)
                 .replace("{{FOOTER_URL}}", self.footer_url)
                 .replace("{{MERMAID_CODE}}", mermaid_code)

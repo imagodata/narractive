@@ -26,7 +26,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +39,7 @@ except ImportError as exc:
 
 def _is_headless() -> bool:
     """Detect if we're running in a headless/Docker environment."""
-    return (
-        os.environ.get("DISPLAY", "").startswith(":") and sys.platform != "win32"
-    )
+    return os.environ.get("DISPLAY", "").startswith(":") and sys.platform != "win32"
 
 
 class AppAutomator:
@@ -110,8 +107,8 @@ class AppAutomator:
     def _focus_win32(self, title_substring: str) -> None:
         """Use win32gui to find and bring window to front."""
         try:
-            import win32gui  # type: ignore
             import win32con  # type: ignore
+            import win32gui  # type: ignore
 
             def _enum_cb(hwnd, results):
                 if win32gui.IsWindowVisible(hwnd):
@@ -131,7 +128,7 @@ class AppAutomator:
             logger.info("Focused window (hwnd=%d).", hwnd)
         except ImportError:
             logger.warning("pywin32 not available. Skipping win32 focus.")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Failed to focus window: %s", exc)
 
     def _focus_xdotool(self, title_substring: str) -> None:
@@ -171,7 +168,7 @@ class AppAutomator:
                 timeout=5,
             )
             logger.info("Focused window via xdotool (wid=%s).", wid)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Failed to focus window via xdotool: %s", exc)
 
     # ------------------------------------------------------------------
@@ -191,9 +188,7 @@ class AppAutomator:
         """
         region = self.regions.get(region_name)
         if region is None:
-            raise ValueError(
-                f"Region '{region_name}' not found in config. Run calibrate.py first."
-            )
+            raise ValueError(f"Region '{region_name}' not found in config. Run calibrate.py first.")
         if "width" in region:
             cx = region["x"] + region["width"] // 2 + offset_x
             cy = region["y"] + region["height"] // 2 + offset_y
@@ -228,9 +223,7 @@ class AppAutomator:
             )
             return False
         try:
-            location = pyautogui.locateOnScreen(
-                str(img_path), confidence=confidence
-            )
+            location = pyautogui.locateOnScreen(str(img_path), confidence=confidence)
             if location is None:
                 logger.warning("Button '%s' not found on screen.", button_name)
                 return False
@@ -239,7 +232,7 @@ class AppAutomator:
             pyautogui.click()
             logger.info("Clicked image button '%s' at (%d, %d)", button_name, cx, cy)
             return True
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Image click failed for '%s': %s", button_name, exc)
             return False
 
@@ -248,7 +241,9 @@ class AppAutomator:
     # ------------------------------------------------------------------
 
     def select_combobox_by_arrow(
-        self, region_name: str, index: int,
+        self,
+        region_name: str,
+        index: int,
     ) -> None:
         """Select an item in a non-editable combobox using arrow-key navigation.
 
@@ -264,7 +259,8 @@ class AppAutomator:
             logger.warning("Combobox region '%s' not calibrated.", region_name)
             return
         pyautogui.click(
-            region["x"], region["y"],
+            region["x"],
+            region["y"],
             duration=self.timing.get("mouse_move_duration", 0.5),
         )
         self.wait(0.3)
@@ -278,13 +274,17 @@ class AppAutomator:
         logger.debug("Selected index %d in combobox '%s'", index, region_name)
 
     def select_combobox_item(
-        self, region_name: str, item_text: str, double_click: bool = False,
+        self,
+        region_name: str,
+        item_text: str,
+        double_click: bool = False,
     ) -> None:
         """Generic: click a combobox, clear, type item name, press Enter."""
         region = self.regions.get(region_name)
         if region:
             pyautogui.click(
-                region["x"], region["y"],
+                region["x"],
+                region["y"],
                 duration=self.timing.get("mouse_move_duration", 0.5),
             )
             if double_click:
@@ -304,8 +304,9 @@ class AppAutomator:
         """Click a checkable sidebar pushbutton to toggle its section."""
         region = self.regions.get(pushbutton_region)
         if region:
-            pyautogui.click(region["x"], region["y"],
-                            duration=self.timing.get("mouse_move_duration", 0.5))
+            pyautogui.click(
+                region["x"], region["y"], duration=self.timing.get("mouse_move_duration", 0.5)
+            )
             self.wait(0.8)
             logger.info("Toggled section: %s", pushbutton_region)
         else:
@@ -317,8 +318,7 @@ class AppAutomator:
         if not btn:
             logger.warning("Pushbutton '%s' not calibrated.", pushbutton_region)
             return
-        pyautogui.click(btn["x"], btn["y"],
-                        duration=self.timing.get("mouse_move_duration", 0.5))
+        pyautogui.click(btn["x"], btn["y"], duration=self.timing.get("mouse_move_duration", 0.5))
         self.wait(0.8)
         logger.info("Expanded section: %s (dependent: %s)", pushbutton_region, dependent_widget)
 
@@ -326,7 +326,7 @@ class AppAutomator:
     # Text input
     # ------------------------------------------------------------------
 
-    def type_text(self, text: str, interval: Optional[float] = None) -> None:
+    def type_text(self, text: str, interval: float | None = None) -> None:
         """Type text with natural keystroke timing."""
         if interval is None:
             interval = self.timing.get("type_delay", 0.05)
@@ -367,7 +367,7 @@ class AppAutomator:
     # Mouse movement
     # ------------------------------------------------------------------
 
-    def move_mouse_to(self, x: int, y: int, duration: Optional[float] = None) -> None:
+    def move_mouse_to(self, x: int, y: int, duration: float | None = None) -> None:
         """Move the mouse smoothly to absolute screen coordinates."""
         if duration is None:
             duration = self.timing.get("mouse_move_duration", 0.5)
@@ -415,14 +415,16 @@ class AppAutomator:
         region = self.regions.get(menu_region)
         if region:
             pyautogui.click(
-                region["x"], region["y"],
+                region["x"],
+                region["y"],
                 duration=self.timing.get("mouse_move_duration", 0.5),
             )
         self.wait(0.5)
         region_item = self.regions.get(item_region)
         if region_item:
             pyautogui.click(
-                region_item["x"], region_item["y"],
+                region_item["x"],
+                region_item["y"],
                 duration=self.timing.get("mouse_move_duration", 0.5),
             )
         self.wait(1.0)
@@ -493,6 +495,7 @@ class AppAutomator:
                 )
         else:
             from PIL import ImageGrab  # type: ignore
+
             img = ImageGrab.grab()
             img.save(filepath)
         logger.info("Screenshot saved: %s", filepath)

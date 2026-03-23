@@ -29,7 +29,6 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 from video_automation.core.text_preprocessor import TextPreprocessor
 
@@ -60,9 +59,13 @@ def _get_audio_info(audio_path: Path) -> dict:
     try:
         result = subprocess.run(
             [
-                "ffprobe", "-v", "quiet",
-                "-print_format", "json",
-                "-show_streams", "-show_format",
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_streams",
+                "-show_format",
                 str(audio_path),
             ],
             capture_output=True,
@@ -175,12 +178,18 @@ def prepare_reference_audio(
     logger.info("Preparing reference audio: %s", ", ".join(reasons))
 
     ffmpeg_cmd = [
-        "ffmpeg", "-y",
-        "-i", str(ref_audio),
-        "-ac", str(target_channels),
-        "-ar", str(target_sr),
-        "-sample_fmt", "s16",
-        "-af", f"loudnorm=I=-16:TP=-1:LRA=11,atrim=0:{max_duration}",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(ref_audio),
+        "-ac",
+        str(target_channels),
+        "-ar",
+        str(target_sr),
+        "-sample_fmt",
+        "s16",
+        "-af",
+        f"loudnorm=I=-16:TP=-1:LRA=11,atrim=0:{max_duration}",
         str(prepared_path),
     ]
 
@@ -211,9 +220,7 @@ def prepare_reference_audio(
         return prepared_path
 
     except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-        logger.warning(
-            "ffmpeg unavailable: %s. Using original reference audio.", exc
-        )
+        logger.warning("ffmpeg unavailable: %s. Using original reference audio.", exc)
         return ref_audio
 
 
@@ -254,9 +261,12 @@ def postprocess_audio(
     temp_path = audio_path.parent / f"{audio_path.stem}_postproc.wav"
 
     ffmpeg_cmd = [
-        "ffmpeg", "-y",
-        "-i", str(audio_path),
-        "-af", f"loudnorm=I={target_lufs}:TP={target_tp}:LRA=11:print_format=summary",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(audio_path),
+        "-af",
+        f"loudnorm=I={target_lufs}:TP={target_tp}:LRA=11:print_format=summary",
         str(temp_path),
     ]
 
@@ -278,7 +288,9 @@ def postprocess_audio(
         temp_path.replace(audio_path)
         logger.info(
             "EBU R128 normalization applied to %s (target: %.0f LUFS, TP: %.0f dBTP)",
-            audio_path.name, target_lufs, target_tp,
+            audio_path.name,
+            target_lufs,
+            target_tp,
         )
         return audio_path
 
@@ -325,7 +337,7 @@ class Narrator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         # F5-TTS specific config
-        self.f5_ref_audio: Optional[str] = config.get("f5_ref_audio")
+        self.f5_ref_audio: str | None = config.get("f5_ref_audio")
         self.f5_ref_text: str = config.get("f5_ref_text", "")
         self.f5_model: str = config.get("f5_model", "F5TTS_v1_Base")
         self.f5_speed: float = config.get("f5_speed", 1.0)
@@ -342,7 +354,7 @@ class Narrator:
         self.f5_vocab_file: str | None = config.get("f5_vocab_file")
 
         # XTTS v2 specific config
-        self.xtts_ref_audio: Optional[str] = config.get("xtts_ref_audio")
+        self.xtts_ref_audio: str | None = config.get("xtts_ref_audio")
         self.xtts_language: str = config.get("xtts_language", "en")
         self.xtts_speed: float = config.get("xtts_speed", 1.0)
         self.xtts_gpu: bool = config.get("xtts_gpu", True)
@@ -373,7 +385,7 @@ class Narrator:
         self,
         text: str,
         output_path: str | Path,
-        voice: Optional[str] = None,
+        voice: str | None = None,
         lang: str = "fr",
     ) -> Path:
         """
@@ -435,7 +447,7 @@ class Narrator:
     def generate_all_narrations(
         self,
         script_dict: dict[str, str],
-        output_dir: Optional[str | Path] = None,
+        output_dir: str | Path | None = None,
         lang: str = "fr",
     ) -> dict[str, Path]:
         """Batch-generate narration audio for all sequences."""
@@ -447,7 +459,7 @@ class Narrator:
             logger.info("Generating narration for %s...", seq_id)
             try:
                 results[seq_id] = self.generate_narration(text, output_path, lang=lang)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.error("Failed to generate narration for %s: %s", seq_id, exc)
         return results
 
@@ -471,7 +483,7 @@ class Narrator:
             return float(audio.info.length)
         except ImportError:
             pass
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("mutagen failed: %s", exc)
 
         return self._ffprobe_duration(audio_path)
@@ -482,10 +494,11 @@ class Narrator:
             raise RuntimeError("list_voices() only supports edge-tts engine.")
         try:
             import edge_tts  # type: ignore
+
             voices = asyncio.run(edge_tts.list_voices())
             return voices
-        except ImportError:
-            raise ImportError("edge-tts not installed. Run: pip install edge-tts")
+        except ImportError as e:
+            raise ImportError("edge-tts not installed. Run: pip install edge-tts") from e
 
     # ------------------------------------------------------------------
     # Engine implementations
@@ -494,8 +507,8 @@ class Narrator:
     def _generate_edge_tts(self, text: str, output_path: Path, voice: str) -> Path:
         try:
             import edge_tts  # type: ignore
-        except ImportError:
-            raise ImportError("edge-tts not installed. Run: pip install edge-tts")
+        except ImportError as e:
+            raise ImportError("edge-tts not installed. Run: pip install edge-tts") from e
 
         async def _run():
             communicate = edge_tts.Communicate(text, voice, rate=self.speed)
@@ -504,20 +517,24 @@ class Narrator:
         asyncio.run(_run())
         if not output_path.exists() or output_path.stat().st_size == 0:
             raise RuntimeError(f"edge-tts produced empty/missing file: {output_path}")
-        logger.info("edge-tts generated: %s (%.1fs)", output_path.name,
-                    self.get_narration_duration(output_path))
+        logger.info(
+            "edge-tts generated: %s (%.1fs)",
+            output_path.name,
+            self.get_narration_duration(output_path),
+        )
         return output_path
 
     def _generate_elevenlabs(self, text: str, output_path: Path, voice: str) -> Path:
         import os
+
         try:
             from elevenlabs import generate, save  # type: ignore
-        except ImportError:
-            raise ImportError("elevenlabs not installed. Run: pip install elevenlabs")
+        except ImportError as e:
+            raise ImportError("elevenlabs not installed. Run: pip install elevenlabs") from e
 
         api_key = os.environ.get("ELEVENLABS_API_KEY")
         if not api_key:
-            raise EnvironmentError("ELEVENLABS_API_KEY environment variable not set.")
+            raise OSError("ELEVENLABS_API_KEY environment variable not set.")
 
         audio = generate(text=text, voice=voice, api_key=api_key)
         save(audio, str(output_path))
@@ -554,6 +571,7 @@ class Narrator:
             )
 
         import tempfile
+
         gen_text_file = Path(tempfile.mktemp(suffix="_gen.txt"))
         ref_text_file = Path(tempfile.mktemp(suffix="_ref.txt"))
         gen_text_file.write_text(text, encoding="utf-8")
@@ -561,21 +579,34 @@ class Narrator:
 
         cmd = [
             str(conda_python),
-            "-X", "utf8",
+            "-X",
+            "utf8",
             str(bridge_script),
-            "--model", self.f5_model,
-            "--ref_audio", str(ref_audio_path),
-            "--ref_text_file", str(ref_text_file),
-            "--gen_text_file", str(gen_text_file),
-            "--output_file", str(wav_output),
-            "--speed", str(self.f5_speed),
+            "--model",
+            self.f5_model,
+            "--ref_audio",
+            str(ref_audio_path),
+            "--ref_text_file",
+            str(ref_text_file),
+            "--gen_text_file",
+            str(gen_text_file),
+            "--output_file",
+            str(wav_output),
+            "--speed",
+            str(self.f5_speed),
             # Advanced inference parameters
-            "--nfe_step", str(self.f5_nfe_step),
-            "--cfg_strength", str(self.f5_cfg_strength),
-            "--sway_sampling_coef", str(self.f5_sway_sampling_coef),
-            "--cross_fade_duration", str(self.f5_cross_fade_duration),
-            "--target_rms", str(self.f5_target_rms),
-            "--seed", str(self.f5_seed),
+            "--nfe_step",
+            str(self.f5_nfe_step),
+            "--cfg_strength",
+            str(self.f5_cfg_strength),
+            "--sway_sampling_coef",
+            str(self.f5_sway_sampling_coef),
+            "--cross_fade_duration",
+            str(self.f5_cross_fade_duration),
+            "--target_rms",
+            str(self.f5_target_rms),
+            "--seed",
+            str(self.f5_seed),
         ]
         if self.f5_remove_silence:
             cmd.append("--remove_silence")
@@ -588,14 +619,16 @@ class Narrator:
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"F5-TTS timed out after 300s for: {output_path.name}")
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"F5-TTS timed out after 300s for: {output_path.name}") from e
         finally:
             gen_text_file.unlink(missing_ok=True)
             ref_text_file.unlink(missing_ok=True)
 
         if result.returncode != 0:
-            raise RuntimeError(f"F5-TTS CLI failed (exit {result.returncode}):\n{result.stderr[:500]}")
+            raise RuntimeError(
+                f"F5-TTS CLI failed (exit {result.returncode}):\n{result.stderr[:500]}"
+            )
 
         if not wav_output.exists() or wav_output.stat().st_size == 0:
             raise RuntimeError(f"F5-TTS produced empty/missing file: {wav_output}")
@@ -606,8 +639,11 @@ class Narrator:
         else:
             output_path = wav_output
 
-        logger.info("F5-TTS generated: %s (%.1fs)", output_path.name,
-                    self.get_narration_duration(output_path))
+        logger.info(
+            "F5-TTS generated: %s (%.1fs)",
+            output_path.name,
+            self.get_narration_duration(output_path),
+        )
         return output_path
 
     def _generate_xtts(self, text: str, output_path: Path) -> Path:
@@ -653,33 +689,39 @@ class Narrator:
 
         cmd = [
             str(conda_python),
-            "-X", "utf8",
+            "-X",
+            "utf8",
             str(bridge_script),
-            "--ref_audio", str(ref_audio_path),
-            "--text_file", str(text_file),
-            "--output_file", str(wav_output),
-            "--language", self.xtts_language,
-            "--speed", str(self.xtts_speed),
+            "--ref_audio",
+            str(ref_audio_path),
+            "--text_file",
+            str(text_file),
+            "--output_file",
+            str(wav_output),
+            "--language",
+            self.xtts_language,
+            "--speed",
+            str(self.xtts_speed),
         ]
         if self.xtts_gpu:
             cmd.append("--gpu")
 
         logger.info(
             "XTTS v2 generating: %s (lang=%s, conda=%s)",
-            output_path.name, self.xtts_language, self.xtts_conda_env,
+            output_path.name,
+            self.xtts_language,
+            self.xtts_conda_env,
         )
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"XTTS v2 timed out after 300s for: {output_path.name}")
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"XTTS v2 timed out after 300s for: {output_path.name}") from e
         finally:
             text_file.unlink(missing_ok=True)
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"XTTS v2 failed (exit {result.returncode}):\n{result.stderr[:500]}"
-            )
+            raise RuntimeError(f"XTTS v2 failed (exit {result.returncode}):\n{result.stderr[:500]}")
 
         if not wav_output.exists() or wav_output.stat().st_size == 0:
             raise RuntimeError(f"XTTS v2 produced empty/missing file: {wav_output}")
@@ -692,7 +734,8 @@ class Narrator:
 
         logger.info(
             "XTTS v2 generated: %s (%.1fs)",
-            output_path.name, self.get_narration_duration(output_path),
+            output_path.name,
+            self.get_narration_duration(output_path),
         )
         return output_path
 
@@ -720,11 +763,7 @@ class Narrator:
             if not conda_python.exists():
                 # Try Windows path
                 conda_python = (
-                    Path.home()
-                    / "miniconda3"
-                    / "envs"
-                    / self.kokoro_conda_env
-                    / "python.exe"
+                    Path.home() / "miniconda3" / "envs" / self.kokoro_conda_env / "python.exe"
                 )
             if not conda_python.exists():
                 raise RuntimeError(
@@ -740,32 +779,37 @@ class Narrator:
 
         cmd = [
             python_cmd,
-            "-X", "utf8",
+            "-X",
+            "utf8",
             str(bridge_script),
-            "--text_file", str(text_file),
-            "--output_file", str(wav_output),
-            "--lang", kokoro_lang,
-            "--speed", str(self.kokoro_speed),
+            "--text_file",
+            str(text_file),
+            "--output_file",
+            str(wav_output),
+            "--lang",
+            kokoro_lang,
+            "--speed",
+            str(self.kokoro_speed),
         ]
         if self.kokoro_voice:
             cmd.extend(["--voice", self.kokoro_voice])
 
         logger.info(
             "Kokoro generating: %s (lang=%s, voice=%s)",
-            output_path.name, kokoro_lang, self.kokoro_voice or "default",
+            output_path.name,
+            kokoro_lang,
+            self.kokoro_voice or "default",
         )
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"Kokoro timed out after 120s for: {output_path.name}")
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"Kokoro timed out after 120s for: {output_path.name}") from e
         finally:
             text_file.unlink(missing_ok=True)
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"Kokoro failed (exit {result.returncode}):\n{result.stderr[:500]}"
-            )
+            raise RuntimeError(f"Kokoro failed (exit {result.returncode}):\n{result.stderr[:500]}")
 
         if not wav_output.exists() or wav_output.stat().st_size == 0:
             raise RuntimeError(f"Kokoro produced empty/missing file: {wav_output}")
@@ -778,7 +822,8 @@ class Narrator:
 
         logger.info(
             "Kokoro generated: %s (%.1fs)",
-            output_path.name, self.get_narration_duration(output_path),
+            output_path.name,
+            self.get_narration_duration(output_path),
         )
         return output_path
 
@@ -787,22 +832,33 @@ class Narrator:
         try:
             subprocess.run(
                 ["ffmpeg", "-y", "-i", str(wav_path), "-q:a", "2", str(mp3_path)],
-                capture_output=True, check=True,
+                capture_output=True,
+                check=True,
             )
-        except FileNotFoundError:
-            raise RuntimeError("ffmpeg not found. Install ffmpeg to convert WAV to MP3.")
+        except FileNotFoundError as e:
+            raise RuntimeError("ffmpeg not found. Install ffmpeg to convert WAV to MP3.") from e
 
     def _ffprobe_duration(self, audio_path: Path) -> float:
         try:
             result = subprocess.run(
-                ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(audio_path)],
-                capture_output=True, text=True, check=True,
+                [
+                    "ffprobe",
+                    "-v",
+                    "quiet",
+                    "-print_format",
+                    "json",
+                    "-show_streams",
+                    str(audio_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             data = json.loads(result.stdout)
             for stream in data.get("streams", []):
                 if "duration" in stream:
                     return float(stream["duration"])
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("ffprobe failed: %s", exc)
         return 0.0
 
@@ -811,9 +867,11 @@ class Narrator:
 # Narration texts — loaded from narrations.yaml
 # ---------------------------------------------------------------------------
 
+
 def load_narrations_from_yaml(yaml_path: str | Path) -> dict[str, dict[str, str]]:
     """Load narrations from a YAML file."""
     import yaml
+
     yaml_path = Path(yaml_path)
     if not yaml_path.exists():
         logger.warning("narrations.yaml not found at %s", yaml_path)
