@@ -245,26 +245,22 @@ class TestOBSConvenience:
 
 class TestOBSWaitForRecording:
     @patch("video_automation.core.obs_controller.time.sleep")
-    @patch("video_automation.core.obs_controller.time.time")
-    def test_wait_success(self, mock_time, mock_sleep):
+    def test_wait_success(self, mock_sleep):
         obs = OBSController({})
         obs._client = MagicMock()
         resp = MagicMock()
         resp.output_active = True
         resp.output_paused = False
         obs._client.get_record_status.return_value = resp
-        mock_time.side_effect = [0.0, 0.5]
         obs.wait_for_recording_start(timeout=5.0)
 
     @patch("video_automation.core.obs_controller.time.sleep")
-    @patch("video_automation.core.obs_controller.time.time")
-    def test_wait_timeout(self, mock_time, mock_sleep):
+    def test_wait_timeout(self, mock_sleep):
         obs = OBSController({})
         obs._client = MagicMock()
         resp = MagicMock()
         resp.output_active = False
         resp.output_paused = False
         obs._client.get_record_status.return_value = resp
-        mock_time.side_effect = [0.0, 5.0, 11.0]
         with pytest.raises(TimeoutError):
-            obs.wait_for_recording_start(timeout=10.0)
+            obs.wait_for_recording_start(timeout=0.1, poll=0.01)

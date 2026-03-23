@@ -14,7 +14,6 @@ from video_automation.core.narrator import (
     prepare_reference_audio,
     get_narration_texts,
     load_narrations_multilingual,
-    format_duration if hasattr(__import__('video_automation.core.narrator', fromlist=['format_duration']), 'format_duration') else None,
 )
 
 
