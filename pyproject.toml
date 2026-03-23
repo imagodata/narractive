@@ -40,6 +40,7 @@ png = ["playwright>=1.40"]
 elevenlabs = ["elevenlabs"]
 xtts = ["TTS>=0.22"]
 kokoro = ["kokoro", "soundfile"]
+openai = ["openai>=1.0"]
 all = [
     "obsws-python>=1.7.0",
     "pywin32>=306",

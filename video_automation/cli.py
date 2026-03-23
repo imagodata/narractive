@@ -133,6 +133,8 @@ def load_sequences_from_package(package_path: str) -> list:
 @click.option("--diagrams-module", type=str, default=None, metavar="MOD",
               help="Python module path for diagram definitions (e.g. 'examples.filtermate.diagrams.mermaid_definitions')")
 @click.option("--narration", is_flag=True, help="Generate TTS narration audio files")
+@click.option("--force-narration", "force_narration", is_flag=True,
+              help="Regenerate narration audio even when cache is valid (bypass cache)")
 @click.option("--narrations-file", type=click.Path(exists=True), default=None,
               help="Path to narrations.yaml file")
 @click.option("--video", type=str, default=None, metavar="VXX",
@@ -156,7 +158,7 @@ def load_sequences_from_package(package_path: str) -> list:
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose (DEBUG) logging")
 @click.pass_context
 def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_module,
-        narration, narrations_file, video, calibrate, setup_obs, subtitles, lang,
+        narration, force_narration, narrations_file, video, calibrate, setup_obs, subtitles, lang,
         narrations_dir, quality, assemble, capture, capture_fps, dry_run, list_seqs,
         project_name, verbose):
     """Narractive — orchestrates App + OBS/FrameCapture + TTS + FFmpeg."""
@@ -211,7 +213,8 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
         return
 
     if narration:
-        cmd_narration(cfg, dry_run, video=video, narrations_file=narrations_file)
+        cmd_narration(cfg, dry_run, video=video, narrations_file=narrations_file,
+                      force=force_narration)
         return
 
     if subtitles:
@@ -370,7 +373,7 @@ def cmd_subtitles(
 
 
 def cmd_narration(config: dict, dry_run: bool, video: str | None = None,
-                  narrations_file: str | None = None) -> None:
+                  narrations_file: str | None = None, force: bool = False) -> None:
     """Generate TTS narration audio for all sequences."""
     from video_automation.core.narrator import Narrator, get_narration_texts
 
@@ -386,10 +389,14 @@ def cmd_narration(config: dict, dry_run: bool, video: str | None = None,
 
     if dry_run:
         click.echo(f"[DRY-RUN] Would generate {len(narration_texts)} narration files ({label})")
+        if force:
+            click.echo("  (cache bypass: --force-narration)")
         return
 
+    if force:
+        click.echo("  Cache bypassed via --force-narration")
     click.echo(f"\nGenerating narration for {len(narration_texts)} sequences ({label})...")
-    results = narrator.generate_all_narrations(narration_texts, out_dir)
+    results = narrator.generate_all_narrations(narration_texts, out_dir, force=force)
     click.echo(f"\nDone! {len(results)} audio files in {out_dir}\n")
 
     total = 0.0

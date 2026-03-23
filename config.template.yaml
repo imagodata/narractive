@@ -63,7 +63,7 @@ diagrams:
   font_family: Segoe UI
 
 narration:
-  engine: edge-tts             # edge-tts | elevenlabs | f5-tts | xtts-v2 | kokoro
+  engine: edge-tts             # edge-tts | elevenlabs | f5-tts | xtts-v2 | kokoro | openai
   voice: fr-FR-HenriNeural     # Microsoft Neural TTS voice
   output_dir: output/narration
   speed: +0%
@@ -76,9 +76,25 @@ narration:
   # f5_remove_silence: false
   # Kokoro TTS options (ultra-fast local TTS, no voice cloning):
   # kokoro_lang: fr             # en, en-gb, fr, pt, pt-br, es, it, ja, zh, hi, ko
-  # kokoro_voice: ff_siwis      # Voice name (see kokoro_bridge.py for defaults)
+  # kokoro_voice: ff_siwis      # Simple voice name (see kokoro_bridge.py for defaults)
   # kokoro_speed: 1.0
   # kokoro_conda_env:           # Optional: conda env name (omit to use current Python)
+  # kokoro:
+  #   # Voice mixing (blend two or more voices with weights):
+  #   voices:
+  #     - voice: ff_siwis
+  #       weight: 0.7
+  #     - voice: ff_alpha
+  #       weight: 0.3
+  #   # OR custom voice pack (.pt file):
+  #   # voice_file: /path/to/my_voice.pt
+  # OpenAI TTS options (cloud-based, high quality, ~$15/M chars for tts-1-hd):
+  # openai:
+  #   api_key: ${OPENAI_API_KEY}   # or set OPENAI_API_KEY env var
+  #   model: tts-1-hd              # tts-1 (faster, cheaper) or tts-1-hd (higher quality)
+  #   voice: alloy                  # alloy, echo, fable, onyx, nova, shimmer
+  #   speed: 1.0                    # 0.25–4.0
+  #   format: mp3                   # mp3, opus, aac, flac
 
 capture:
   fps: 10
