@@ -72,6 +72,21 @@ if _PYDANTIC_AVAILABLE:
         background_color: str = "#1a1a2e"
         font_family: str = "Segoe UI"
 
+    class KokoroVoiceMixEntry(BaseModel):
+        voice: str
+        weight: float = 1.0
+
+    class KokoroConfig(BaseModel):
+        voices: list[KokoroVoiceMixEntry] = Field(default_factory=list)
+        voice_file: str | None = None
+
+    class OpenAITTSConfig(BaseModel):
+        api_key: str | None = None
+        model: str = "tts-1-hd"
+        voice: str = "alloy"
+        speed: float = 1.0
+        format: str = "mp3"
+
     class NarrationConfig(BaseModel):
         engine: str = "edge-tts"
         voice: str = "fr-FR-HenriNeural"
@@ -87,6 +102,8 @@ if _PYDANTIC_AVAILABLE:
         kokoro_voice: str | None = None
         kokoro_speed: float | None = None
         kokoro_conda_env: str | None = None
+        kokoro: KokoroConfig = Field(default_factory=KokoroConfig)
+        openai: OpenAITTSConfig = Field(default_factory=OpenAITTSConfig)
 
     class SubtitlesConfig(BaseModel):
         enabled: bool = True
