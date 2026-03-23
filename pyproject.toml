@@ -45,10 +45,12 @@ all = [
     "obsws-python>=1.7.0",
     "pywin32>=306",
     "playwright>=1.40",
+    "rich>=13.0",
 ]
 headless = [
     "python-xlib>=0.33",
 ]
+report = ["rich>=13.0"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",

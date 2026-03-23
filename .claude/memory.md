@@ -65,3 +65,20 @@ Result: Sprint 2 est implémenté. PR ouverte : **https://github.com/imagodata/n
 - Crée: `config.yaml`, `sequences/__init__.py`, `sequences/seq00_intro.py`, `narrations/<lang>.yaml`, `diagrams/definitions.py`
 
 **Issue #4 — Config schema validat
+
+
+## [2026-03-23 15:15]
+Delegate task: narractive continuer les prochaines implementations et close les issues terminées
+Result: ## Résumé
+
+**Tâche 1 — Sprint 3 clôturé ✅**
+- PR #18 mergée
+- Issues #6, #7, #8 fermées
+
+**Tâche 2 — Sprint 4 implémenté ✅**
+
+| Issue | Feature | Implémentation |
+|-------|---------|----------------|
+| #9 | **Chapter markers MP4** | `VideoAssembler.add_chapter_markers()` via FFMETADATA + `-map_chapters` |
+| #10 | **WebVTT subtitles** | `generate_vtt()` + `format_vtt_timestamp()` dans `subtitles.py`, flag `generate_webvtt=True` |
+| #11 | **Intro/outro video clips** | `add_intro_outro()` étendu av

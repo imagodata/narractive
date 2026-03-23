@@ -129,6 +129,12 @@ def load_sequences_from_package(package_path: str) -> list:
               help="Run only sequence N")
 @click.option("--from", "start_from", type=int, default=None, metavar="N",
               help="Resume pipeline from sequence N")
+@click.option("--resume", "resume", is_flag=True,
+              help="Automatically resume from the last failed/interrupted sequence (uses pipeline state)")
+@click.option("--reset", "reset_state", is_flag=True,
+              help="Delete pipeline state file and start fresh")
+@click.option("--status", "show_status", is_flag=True,
+              help="Show current pipeline state (completed/failed/pending sequences)")
 @click.option("--diagrams", is_flag=True, help="Generate Mermaid diagram HTML/PNG files")
 @click.option("--diagrams-module", type=str, default=None, metavar="MOD",
               help="Python module path for diagram definitions (e.g. 'examples.filtermate.diagrams.mermaid_definitions')")
@@ -157,7 +163,8 @@ def load_sequences_from_package(package_path: str) -> list:
 @click.option("--project-name", type=str, default="Video", help="Project name for output labeling")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose (DEBUG) logging")
 @click.pass_context
-def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_module,
+def cli(ctx, config, seq_pkg, run_all, sequence, start_from, resume, reset_state, show_status,
+        diagrams, diagrams_module,
         narration, force_narration, narrations_file, video, calibrate, setup_obs, subtitles, lang,
         narrations_dir, quality, assemble, capture, capture_fps, dry_run, list_seqs,
         project_name, verbose):
@@ -165,8 +172,8 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Subcommands that don't need a pre-existing config.yaml
-    if ctx.invoked_subcommand in ("init", "validate-config"):
+    # Subcommands that manage their own config loading
+    if ctx.invoked_subcommand in ("init", "validate-config", "preview", "report"):
         return
 
     # Find config
@@ -196,6 +203,20 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
     ctx.obj["quality"] = quality
 
     # Dispatch
+    if reset_state:
+        from video_automation.core.pipeline_state import PipelineState
+        state = PipelineState.from_config(cfg)
+        state.delete()
+        click.echo("Pipeline state reset.")
+        if not run_all:
+            return
+
+    if show_status:
+        from video_automation.core.pipeline_state import PipelineState
+        state = PipelineState.from_config(cfg)
+        click.echo(state.status_table())
+        return
+
     if list_seqs:
         cmd_list(cfg, seq_pkg=seq_pkg, project_name=project_name)
         return
@@ -231,7 +252,8 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, diagrams, diagrams_
 
     if run_all:
         cmd_run_all(cfg, dry_run, seq_pkg=seq_pkg, use_capture=capture,
-                    start_from=start_from, project_name=project_name, video=video)
+                    start_from=start_from, project_name=project_name, video=video,
+                    resume=resume)
         return
 
     click.echo(ctx.get_help())
@@ -443,8 +465,11 @@ def cmd_run_all(
     seq_pkg: str | None = None, use_capture: bool = False,
     start_from: int | None = None, project_name: str = "Video",
     video: str | None = None,
+    resume: bool = False,
 ) -> None:
     """Run the complete video production pipeline."""
+    from video_automation.core.pipeline_state import PipelineState
+
     SEQUENCES = _load_sequences(seq_pkg)
     backend = "FrameCapture" if use_capture else "OBS"
 
@@ -452,16 +477,42 @@ def cmd_run_all(
     click.echo(f"  {project_name} — Complete Video Production ({backend})")
     click.echo("=" * 65)
 
-    if start_from is not None:
+    # Build ordered list of sequence IDs for state tracking
+    seq_instances = [SeqClass() for SeqClass in SEQUENCES]
+    all_seq_ids = [
+        getattr(seq, "sequence_id", f"seq{i:02d}")
+        for i, seq in enumerate(seq_instances)
+    ]
+
+    # Load / initialise pipeline state
+    state = PipelineState.from_config(config)
+
+    # Determine effective start index
+    if resume:
+        effective_start = state.resume_from_index(all_seq_ids)
+        if effective_start > 0:
+            click.echo(
+                f"\n  Resuming from sequence {effective_start} "
+                f"({all_seq_ids[effective_start] if effective_start < len(all_seq_ids) else 'end'})"
+                f" — {len(state.completed_ids())} already completed."
+            )
+    elif start_from is not None:
         if start_from < 0 or start_from >= len(SEQUENCES):
             click.echo(f"Error: --from {start_from} out of range (0-{len(SEQUENCES) - 1})")
             sys.exit(1)
+        effective_start = start_from
+    else:
+        effective_start = 0
+
+    if not resume:
+        # Fresh run: reinitialise state (keeps existing entries on partial --from)
+        state.start_run(sequences_package=seq_pkg or "", total=len(SEQUENCES))
+        state.save()
 
     if dry_run:
         click.echo(f"\n[DRY-RUN] Would run these sequences (backend: {backend}):\n")
-        for i, SeqClass in enumerate(SEQUENCES):
-            seq = SeqClass()
-            skipped = start_from is not None and i < start_from
+        for i, seq in enumerate(seq_instances):
+            skipped = i < effective_start
             marker = "SKIP" if skipped else " RUN"
             click.echo(f"  [{marker}] [{i}] {seq.name:<40} {seq.duration_estimate:.0f}s")
         return
@@ -475,14 +526,27 @@ def cmd_run_all(
 
     with recorder:
         for i, SeqClass in enumerate(SEQUENCES):
-            if start_from is not None and i < start_from:
+            if i < effective_start:
                 continue
 
-            seq = SeqClass()
+            seq = seq_instances[i]
+            seq_id = all_seq_ids[i]
+
+            # Skip already-completed sequences when resuming
+            if resume and state.is_completed(seq_id):
+                click.echo(f"\n  [SKIP] [{i}/{len(SEQUENCES)-1}] {seq.name} (already completed)")
+                recorded = state.get_recordings().get(seq_id)
+                if recorded:
+                    recording_files.append(recorded)
+                continue
+
             click.echo(f"\n[{i}/{len(SEQUENCES)-1}] {seq.name}")
+            state.mark_running(seq_id)
+            state.save()
 
             recorder.start_recording()
             recorder.wait_for_recording_start()
+            output_path = None
             try:
                 seq.run(recorder, app, config)
             except KeyboardInterrupt:
@@ -491,18 +555,35 @@ def cmd_run_all(
                 if output_path:
                     recording_files.append(output_path)
                     all_timeline_results.append((output_path, seq.timeline_result))
+                    state.mark_completed(seq_id, recording_path=output_path)
+                    state.save()
                 break
             except Exception as exc:
                 logger.error("Sequence %d failed: %s", i, exc)
                 click.echo(f"  x Sequence {i} failed: {exc}")
-            finally:
                 output_path = recorder.stop_recording()
+                state.mark_failed(seq_id, error=str(exc))
+                state.save()
                 if output_path:
+                    recording_files.append(output_path)
+                    all_timeline_results.append((output_path, seq.timeline_result))
+                time.sleep(3)
+                continue
+            finally:
+                if output_path is None:
+                    output_path = recorder.stop_recording()
+                if output_path and output_path not in recording_files:
                     recording_files.append(output_path)
                     click.echo(f"  ok Saved: {output_path}")
                     all_timeline_results.append((output_path, seq.timeline_result))
                     if seq.timeline_result:
-                        click.echo(f"       Timeline: {len(seq.timeline_result.narration_timecodes)} narration segments")
+                        click.echo(
+                            f"       Timeline: "
+                            f"{len(seq.timeline_result.narration_timecodes)} narration segments"
+                        )
+                    if not state.is_completed(seq_id):
+                        state.mark_completed(seq_id, recording_path=output_path)
+                        state.save()
                 time.sleep(3)
 
     click.echo(f"\nRecorded {len(recording_files)} clips.")
@@ -834,3 +915,85 @@ def _play_audio(audio_path: Path) -> None:
             click.echo("  (install ffplay or playsound to play audio)")
     except Exception as exc:
         click.echo(f"  !! Playback error: {exc}")
+
+
+# ── `narractive report` ───────────────────────────────────────────────────
+
+
+@cli.command("report")
+@click.argument("build_dir", default="output", type=click.Path())
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default="config.yaml",
+    show_default=True,
+    help="Path to config.yaml.",
+)
+@click.option(
+    "--project-name",
+    "project_name",
+    type=str,
+    default=None,
+    help="Project display name (defaults to build_dir name).",
+)
+@click.option(
+    "--video",
+    "video",
+    type=str,
+    default=None,
+    metavar="VXX",
+    help="Video script key (e.g. 'v01') for locating narration sub-directories.",
+)
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(dir_okay=False),
+    default=None,
+    metavar="FILE",
+    help="Write machine-readable JSON report to FILE (e.g. report.json).",
+)
+@click.option("--json", "as_json", is_flag=True, help="Print JSON report to stdout.")
+def cmd_report(
+    build_dir: str,
+    config_path: str,
+    project_name: str | None,
+    video: str | None,
+    output_path: str | None,
+    as_json: bool,
+) -> None:
+    """Show a production summary for BUILD_DIR (default: output/).
+
+    Scans clips, narration audio, subtitle files, and the final assembled
+    video to report durations, sizes, and per-language subtitle coverage.
+
+    Examples::
+
+        narractive report
+        narractive report output/ --project-name "My Demo" --video v01
+        narractive report --json
+        narractive report --output report.json
+    """
+    import json as _json
+
+    from video_automation.core.report import ProductionReport
+
+    cfg = load_config(Path(config_path))
+    build_path = Path(build_dir).resolve()
+    pname = project_name or build_path.name or "Production"
+
+    rpt = ProductionReport(cfg, build_dir=build_path)
+    rpt.collect(project_name=pname, video=video)
+
+    if as_json:
+        click.echo(_json.dumps(rpt.to_dict(), indent=2, ensure_ascii=False))
+        return
+
+    rpt.print_table()
+
+    if output_path:
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            _json.dump(rpt.to_dict(), f, indent=2, ensure_ascii=False)
+        click.echo(f"  JSON report written to {out}")
