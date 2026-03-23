@@ -67,18 +67,18 @@ Result: Sprint 2 est implémenté. PR ouverte : **https://github.com/imagodata/n
 **Issue #4 — Config schema validat
 
 
-## [2026-03-23 15:15]
-Delegate task: narractive continuer les prochaines implementations et close les issues terminées
-Result: ## Résumé
+## [2026-03-23 15:28]
+Delegate task: narractive start sprint 4
+Result: Sprint 4 clôturé et Sprint 5 implémenté.
 
-**Tâche 1 — Sprint 3 clôturé ✅**
-- PR #18 mergée
-- Issues #6, #7, #8 fermées
+## Résumé
 
-**Tâche 2 — Sprint 4 implémenté ✅**
+**Sprint 4 — Clôturé**
+- PR #19 mergée, issues #9, #10, #11 fermées
+
+**Sprint 5 — PR #20 ouverte : https://github.com/imagodata/narractive/pull/20**
 
 | Issue | Feature | Implémentation |
 |-------|---------|----------------|
-| #9 | **Chapter markers MP4** | `VideoAssembler.add_chapter_markers()` via FFMETADATA + `-map_chapters` |
-| #10 | **WebVTT subtitles** | `generate_vtt()` + `format_vtt_timestamp()` dans `subtitles.py`, flag `generate_webvtt=True` |
-| #11 | **Intro/outro video clips** | `add_intro_outro()` étendu av
+| #12 | **Pipeline state persistence** | `pipeline_state.py` — état JSON dans `output/.narractive-state.json`, flags `--resume`, `--reset`, `--status` |
+| #13 | **Plugin TTS architecture** | `tts_base.py` — ABC `TTSEngine`,
