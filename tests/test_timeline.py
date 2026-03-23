@@ -1,10 +1,6 @@
 """Tests for the NarrationCue dataclass and TimelineExecutor."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import pytest
-
 from video_automation.core.timeline import NarrationCue, TimelineResult
 
 
@@ -20,7 +16,8 @@ class TestNarrationCue:
         assert cue.scene is None
 
     def test_custom_values(self):
-        action = lambda: None
+        def action() -> None:
+            pass
         cue = NarrationCue(
             text="Test",
             actions=action,

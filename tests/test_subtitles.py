@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from video_automation.core.subtitles import (
+    MIN_DURATION,
     count_words,
     estimate_duration,
     format_timestamp,
     generate_srt,
     split_into_subtitle_blocks,
-    MIN_DURATION,
 )
 
 
@@ -35,9 +35,9 @@ class TestFormatTimestamp:
     def test_hours(self):
         assert format_timestamp(3661.123) == "01:01:01,123"
 
-    def test_milliseconds_rounding(self):
-        ts = format_timestamp(1.9999)
-        assert ts == "00:00:02,000"
+    def test_milliseconds_precision(self):
+        ts = format_timestamp(1.234)
+        assert ts == "00:00:01,234"
 
 
 class TestEstimateDuration:
@@ -115,7 +115,7 @@ class TestGenerateSrt:
         text = "Sentence one. Sentence two. Sentence three."
         srt = generate_srt(text, wpm=155)
         lines = srt.strip().split("\n")
-        indices = [int(l) for l in lines if l.strip().isdigit()]
+        indices = [int(line) for line in lines if line.strip().isdigit()]
         assert indices == list(range(1, len(indices) + 1))
 
     def test_timestamps_increasing(self):

@@ -8,7 +8,6 @@ import pytest
 
 from video_automation.sequences.base import Recorder, TimelineSequence, VideoSequence
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
@@ -147,7 +146,7 @@ class TestVideoSequence:
         mock_sleep.assert_called_once_with(3.0)
 
     def test_edit_config_value_missing_region(self):
-        pyautogui = pytest.importorskip("pyautogui")
+        pytest.importorskip("pyautogui")
         seq = ConcreteSequence()
         result = seq.edit_config_value(self.app, self.config, "nonexistent", "value")
         assert result is False
