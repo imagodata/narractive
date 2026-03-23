@@ -270,8 +270,115 @@ class VideoAssembler:
         return output_path
 
     # ------------------------------------------------------------------
+    # Chapter markers
+    # ------------------------------------------------------------------
+
+    def add_chapter_markers(
+        self,
+        video_path: str | Path,
+        chapters: list[dict],
+        output_path: str | Path,
+    ) -> Path:
+        """
+        Embed chapter markers into an MP4 file as FFMETADATA chapters.
+
+        Each chapter is a dict with at minimum a ``title`` key and a
+        ``start`` key (start time in seconds).  An optional ``end`` key may
+        be supplied; if absent it defaults to the start of the next chapter
+        (or the total video duration for the last chapter).
+
+        Parameters
+        ----------
+        video_path : str | Path
+            Input MP4 file.
+        chapters : list[dict]
+            Ordered list of chapter descriptors, e.g.::
+
+                [
+                    {"title": "Introduction", "start": 0.0},
+                    {"title": "Demo",         "start": 30.5},
+                    {"title": "Conclusion",   "start": 90.0},
+                ]
+
+        output_path : str | Path
+            Output MP4 file with chapter metadata.
+
+        Returns
+        -------
+        Path
+            Path to the output file.
+
+        Raises
+        ------
+        ValueError
+            If *chapters* is empty.
+        """
+        video_path = Path(video_path)
+        output_path = Path(output_path)
+
+        if not chapters:
+            raise ValueError("chapters list must not be empty.")
+
+        # Determine total video duration for closing the last chapter
+        total_duration = get_media_duration(video_path) or 0.0
+
+        # Build FFMETADATA content
+        meta_lines = [";FFMETADATA1\n"]
+        for i, chapter in enumerate(chapters):
+            start_sec = float(chapter["start"])
+            if "end" in chapter:
+                end_sec = float(chapter["end"])
+            elif i + 1 < len(chapters):
+                end_sec = float(chapters[i + 1]["start"])
+            else:
+                end_sec = total_duration
+
+            # FFmpeg chapters use millisecond timebase by convention
+            start_ms = int(start_sec * 1000)
+            end_ms = int(end_sec * 1000)
+            title = chapter.get("title", f"Chapter {i + 1}")
+
+            meta_lines.append("[CHAPTER]")
+            meta_lines.append("TIMEBASE=1/1000")
+            meta_lines.append(f"START={start_ms}")
+            meta_lines.append(f"END={end_ms}")
+            meta_lines.append(f"title={title}")
+            meta_lines.append("")
+
+        metadata_content = "\n".join(meta_lines)
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as tmp:
+            tmp.write(metadata_content)
+            meta_file = tmp.name
+
+        try:
+            _run_ffmpeg(
+                "-i", str(video_path),
+                "-i", meta_file,
+                "-map_metadata", "1",
+                "-map_chapters", "1",
+                "-c", "copy",
+                str(output_path),
+            )
+        finally:
+            Path(meta_file).unlink(missing_ok=True)
+
+        logger.info(
+            "Added %d chapter markers to %s → %s",
+            len(chapters), video_path.name, output_path.name,
+        )
+        return output_path
+
+    # ------------------------------------------------------------------
     # Intro / Outro
     # ------------------------------------------------------------------
+
+    #: Video file extensions treated as clip sources (not images)
+    VIDEO_EXTENSIONS: frozenset[str] = frozenset(
+        {".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".m4v"}
+    )
 
     def add_intro_outro(
         self,
@@ -279,38 +386,79 @@ class VideoAssembler:
         intro_path: Optional[str | Path],
         outro_path: Optional[str | Path],
         output_path: str | Path,
+        width: int = 1920,
+        height: int = 1080,
+        fps: int = 30,
+        quality: str = "draft",
     ) -> Path:
         """
-        Concatenate intro + main video + outro using FFmpeg concat demuxer.
+        Concatenate intro + main video + outro.
+
+        Both image files (``.png``, ``.jpg``, …) and video clips
+        (``.mp4``, ``.mov``, ``.avi``, …) are accepted as intro/outro
+        sources.  Image sources are first converted to a short video clip
+        via :meth:`create_image_clip`; video clips are used directly.
 
         Parameters
         ----------
         video_path : str | Path
             Main video clip.
         intro_path : str | Path, optional
-            Intro clip.
+            Intro image or video clip.
         outro_path : str | Path, optional
-            Outro clip.
+            Outro image or video clip.
         output_path : str | Path
             Final output.
+        width, height : int
+            Resolution used when converting images to clips.
+        fps : int
+            Frame rate used when converting images to clips.
+        quality : str
+            Encoding preset (``"draft"`` or ``"final"``) for image clips.
 
         Returns
         -------
         Path
         """
         output_path = Path(output_path)
+
+        def _resolve_clip(
+            src: Optional[str | Path], role: str
+        ) -> Optional[Path]:
+            """Return a ready-to-concatenate video clip path, or None."""
+            if src is None:
+                return None
+            src = Path(src)
+            if not src.exists():
+                logger.debug("%s not found, skipping: %s", role, src)
+                return None
+            if src.suffix.lower() in self.VIDEO_EXTENSIONS:
+                # Already a video — use directly
+                return src
+            # Assume image — convert to a video clip
+            clip_path = output_path.parent / f"_{role}_{src.stem}_clip.mp4"
+            logger.info("Converting %s image to video clip: %s", role, src.name)
+            self.create_image_clip(
+                src, clip_path,
+                duration=INTRO_DURATION if role == "intro" else OUTRO_DURATION,
+                width=width, height=height, fps=fps, quality=quality,
+            )
+            return clip_path
+
         clips: list[Path] = []
-        if intro_path and Path(intro_path).exists():
-            clips.append(Path(intro_path))
+        intro_clip = _resolve_clip(intro_path, "intro")
+        if intro_clip:
+            clips.append(intro_clip)
         clips.append(Path(video_path))
-        if outro_path and Path(outro_path).exists():
-            clips.append(Path(outro_path))
+        outro_clip = _resolve_clip(outro_path, "outro")
+        if outro_clip:
+            clips.append(outro_clip)
 
         if len(clips) == 1:
             shutil.copy2(clips[0], output_path)
             return output_path
 
-        # Create a temporary concat list file
+        # Concatenate via FFmpeg concat demuxer
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp:
             for clip in clips:
                 tmp.write(f"file '{clip.resolve()}'\n")
