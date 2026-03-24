@@ -310,9 +310,14 @@ def create_controller(config: dict | None = None) -> QGISController:
         .. code-block:: yaml
 
             qgis:
-              mode: auto          # auto | pyautogui | pyqgis | headless
+              mode: auto          # auto | pyautogui | pyqgis | headless | hybrid
               prefix_path: /usr   # QGIS installation prefix (headless/pyqgis)
               project_path: null  # Default project for headless rendering
+              canvas_region:      # Required for hybrid mode geo→screen mapping
+                x: 320
+                y: 60
+                width: 1280
+                height: 900
 
     Returns
     -------
@@ -337,8 +342,11 @@ def create_controller(config: dict | None = None) -> QGISController:
         return PyQGISController(config=cfg)
     elif mode == "headless":
         return HeadlessController(config=cfg)
+    elif mode == "hybrid":
+        from video_automation.core.qgis_hybrid import HybridController
+        return HybridController(config=config)
     else:
         raise ValueError(
             f"Unknown QGIS controller mode: {mode!r}. "
-            "Valid modes: auto, pyautogui, pyqgis, headless."
+            "Valid modes: auto, pyautogui, pyqgis, headless, hybrid."
         )
