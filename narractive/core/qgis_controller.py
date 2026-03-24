@@ -10,7 +10,7 @@ concrete implementations:
 
 Factory function::
 
-    from video_automation.core.qgis_controller import create_controller
+    from narractive.core.qgis_controller import create_controller
 
     ctrl = create_controller(config)
     ctrl.load_layer("/data/roads.shp", "roads")
@@ -194,7 +194,7 @@ class PyQGISController(QGISController):
     """
 
     def __init__(self, config: dict | None = None) -> None:
-        from video_automation.core.qgis_bridge import QGISBridge  # noqa: F401 — validates import
+        from narractive.core.qgis_bridge import QGISBridge  # noqa: F401 — validates import
 
         self._config = config or {}
         self._bridge = QGISBridge()
@@ -231,7 +231,7 @@ class HeadlessController(QGISController):
     """
 
     def __init__(self, config: dict | None = None) -> None:
-        from video_automation.core.qgis_headless import HeadlessRenderer  # validates import
+        from narractive.core.qgis_headless import HeadlessRenderer  # validates import
 
         self._config = config or {}
         prefix = self._config.get("prefix_path")
@@ -343,7 +343,7 @@ def create_controller(config: dict | None = None) -> QGISController:
     elif mode == "headless":
         return HeadlessController(config=cfg)
     elif mode == "hybrid":
-        from video_automation.core.qgis_hybrid import HybridController
+        from narractive.core.qgis_hybrid import HybridController
         return HybridController(config=config)
     else:
         raise ValueError(

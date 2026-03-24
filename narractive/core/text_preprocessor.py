@@ -9,7 +9,7 @@ block, with sensible built-in defaults for common terms.
 
 Usage (standalone)::
 
-    from video_automation.core.text_preprocessor import TextPreprocessor
+    from narractive.core.text_preprocessor import TextPreprocessor
 
     # With custom config (the 'pronunciation' section from config.yaml)
     preprocessor = TextPreprocessor(config=pronunciation_config)

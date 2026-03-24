@@ -13,7 +13,7 @@ Usage
 Quick registration::
 
     from examples.custom_tts_plugin import SilenceTTSEngine
-    from video_automation.core.narrator import register_tts_engine
+    from narractive.core.narrator import register_tts_engine
 
     register_tts_engine(SilenceTTSEngine)
 
@@ -41,7 +41,7 @@ import struct
 import wave
 from pathlib import Path
 
-from video_automation.core.tts_base import TTSEngine
+from narractive.core.tts_base import TTSEngine
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class SilenceTTSEngine(TTSEngine):
 
 if __name__ == "__main__":
     # Demo: register and use the engine
-    from video_automation.core.narrator import register_tts_engine
+    from narractive.core.narrator import register_tts_engine
 
     register_tts_engine(SilenceTTSEngine)
 

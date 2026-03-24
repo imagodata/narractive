@@ -7,7 +7,7 @@ Diagramme 3 (Interface Utilisateur) affiché.
 
 from __future__ import annotations
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq03Interface(VideoSequence):

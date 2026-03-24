@@ -7,7 +7,7 @@ Diagrammes 9 (Hexagonale) et 10 (Design Patterns).
 
 from __future__ import annotations
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq08Architecture(VideoSequence):

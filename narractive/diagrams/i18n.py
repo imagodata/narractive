@@ -8,7 +8,7 @@ produce localized diagram definitions.
 
 Usage::
 
-    from video_automation.diagrams.i18n import DiagramLabels
+    from narractive.diagrams.i18n import DiagramLabels
 
     labels = DiagramLabels(
         labels={

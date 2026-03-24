@@ -10,7 +10,7 @@ intro/outro generation from images, and duration matching.
 Requires FFmpeg on PATH.
 
 Usage:
-    from video_automation.core.video_assembler import VideoAssembler
+    from narractive.core.video_assembler import VideoAssembler
     va = VideoAssembler(config["output"])
     va.remux_mkv_to_mp4("raw_recording.mkv")
     va.assemble_sequence("seq01", "fr", base_dir, config)

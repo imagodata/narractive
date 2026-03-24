@@ -10,6 +10,6 @@ entry point.
 """
 from __future__ import annotations
 
-from video_automation.sequences.base import TimelineSequence, VideoSequence
+from narractive.sequences.base import TimelineSequence, VideoSequence
 
 __all__ = ["VideoSequence", "TimelineSequence"]

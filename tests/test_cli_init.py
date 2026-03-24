@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from click.testing import CliRunner
 
-from video_automation.cli import cli
+from narractive.cli import cli
 
 # ---------------------------------------------------------------------------
 # Fixtures

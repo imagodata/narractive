@@ -15,7 +15,7 @@ import pytest
 # Issue #10 — WebVTT subtitle support
 # ---------------------------------------------------------------------------
 
-from video_automation.core.subtitles import (
+from narractive.core.subtitles import (
     SubtitleGenerator,
     format_vtt_timestamp,
     generate_vtt,
@@ -146,19 +146,19 @@ class TestSubtitleGeneratorWebVtt:
 # Issue #9 — Chapter markers in MP4
 # ---------------------------------------------------------------------------
 
-from video_automation.core.video_assembler import VideoAssembler
+from narractive.core.video_assembler import VideoAssembler
 
 
 class TestAddChapterMarkers:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_empty_chapters_raises(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         with pytest.raises(ValueError, match="empty"):
             va.add_chapter_markers(tmp_path / "video.mp4", [], tmp_path / "out.mp4")
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
-    @patch("video_automation.core.video_assembler.get_media_duration", return_value=120.0)
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler.get_media_duration", return_value=120.0)
     def test_basic_chapters(self, mock_dur, mock_ffmpeg, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         chapters = [
@@ -171,9 +171,9 @@ class TestAddChapterMarkers:
         assert result == output
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
-    @patch("video_automation.core.video_assembler.get_media_duration", return_value=60.0)
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler.get_media_duration", return_value=60.0)
     def test_metadata_file_contains_chapter_info(
         self, mock_dur, mock_ffmpeg, mock_check, tmp_path
     ):
@@ -210,9 +210,9 @@ class TestAddChapterMarkers:
         else:
             mock_ffmpeg.assert_called()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
-    @patch("video_automation.core.video_assembler.get_media_duration", return_value=100.0)
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler.get_media_duration", return_value=100.0)
     def test_chapter_with_explicit_end(self, mock_dur, mock_ffmpeg, mock_check, tmp_path):
         """Explicit end times are respected."""
         va = VideoAssembler({"final_dir": str(tmp_path)})
@@ -223,9 +223,9 @@ class TestAddChapterMarkers:
         assert result == tmp_path / "out.mp4"
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
-    @patch("video_automation.core.video_assembler.get_media_duration", return_value=60.0)
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler.get_media_duration", return_value=60.0)
     def test_single_chapter_end_defaults_to_duration(
         self, mock_dur, mock_ffmpeg, mock_check, tmp_path
     ):
@@ -237,9 +237,9 @@ class TestAddChapterMarkers:
         )
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
-    @patch("video_automation.core.video_assembler.get_media_duration", return_value=120.0)
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler.get_media_duration", return_value=120.0)
     def test_ffmpeg_receives_map_chapters_flag(
         self, mock_dur, mock_ffmpeg, mock_check, tmp_path
     ):
@@ -259,14 +259,14 @@ class TestAddChapterMarkers:
 
 
 class TestIntroOutroVideoClips:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_video_clip_extensions_defined(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         assert ".mp4" in va.VIDEO_EXTENSIONS
         assert ".mov" in va.VIDEO_EXTENSIONS
         assert ".avi" in va.VIDEO_EXTENSIONS
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_no_intro_outro_copies_main(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         main = tmp_path / "main.mp4"
@@ -276,8 +276,8 @@ class TestIntroOutroVideoClips:
         assert result == output
         assert output.read_bytes() == b"main video content"
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_video_clip_intro_concatenated_directly(
         self, mock_ffmpeg, mock_check, tmp_path
     ):
@@ -295,8 +295,8 @@ class TestIntroOutroVideoClips:
 
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_mov_outro_concatenated_directly(self, mock_ffmpeg, mock_check, tmp_path):
         """.mov outro is treated as a video clip."""
         va = VideoAssembler({"final_dir": str(tmp_path)})
@@ -312,8 +312,8 @@ class TestIntroOutroVideoClips:
 
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_image_intro_converted_to_clip(self, mock_ffmpeg, mock_check, tmp_path):
         """A .png intro must be converted to a video clip first."""
         va = VideoAssembler({"final_dir": str(tmp_path)})
@@ -329,7 +329,7 @@ class TestIntroOutroVideoClips:
             va.add_intro_outro(main, intro_img, None, output)
             mock_img_clip.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_missing_video_intro_ignored(self, mock_check, tmp_path):
         """A non-existent intro file is simply skipped."""
         va = VideoAssembler({"final_dir": str(tmp_path)})
@@ -339,8 +339,8 @@ class TestIntroOutroVideoClips:
         result = va.add_intro_outro(main, tmp_path / "nonexistent.mp4", None, output)
         assert output.read_bytes() == b"main data"
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_avi_outro_treated_as_video(self, mock_ffmpeg, mock_check, tmp_path):
         """.avi outro is treated as a video clip, not an image."""
         va = VideoAssembler({"final_dir": str(tmp_path)})
@@ -356,8 +356,8 @@ class TestIntroOutroVideoClips:
 
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_both_video_intro_and_outro(self, mock_ffmpeg, mock_check, tmp_path):
         """Video intro + video outro: concat is called once with 3 clips."""
         va = VideoAssembler({"final_dir": str(tmp_path)})

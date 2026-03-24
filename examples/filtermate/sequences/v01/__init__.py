@@ -10,7 +10,7 @@ import importlib
 import pkgutil
 from pathlib import Path
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 # Auto-discover all sequence subclasses in this sub-package.
 _pkg_dir = Path(__file__).parent

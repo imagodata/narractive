@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from video_automation.core.diagram_generator import DiagramGenerator
+from narractive.core.diagram_generator import DiagramGenerator
 
 
 # ---------------------------------------------------------------------------

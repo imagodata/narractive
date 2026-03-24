@@ -64,9 +64,9 @@ class TestQGISBridgeNoQGIS:
         # Ensure qgis is NOT importable
         with patch.dict(sys.modules, {"qgis": None, "qgis.core": None}):
             # Force reimport
-            if "video_automation.core.qgis_bridge" in sys.modules:
-                del sys.modules["video_automation.core.qgis_bridge"]
-            from video_automation.core.qgis_bridge import QGISBridge
+            if "narractive.core.qgis_bridge" in sys.modules:
+                del sys.modules["narractive.core.qgis_bridge"]
+            from narractive.core.qgis_bridge import QGISBridge
             bridge = QGISBridge()
             with pytest.raises(ImportError):
                 bridge.load_vector_layer("/fake/path.shp", "layer")
@@ -78,9 +78,9 @@ class TestQGISBridgeWithMock:
     def test_load_vector_layer(self):
         qgis_mock, core, utils = _make_qgis_mock()
         with patch.dict(sys.modules, {"qgis": qgis_mock, "qgis.core": core, "qgis.utils": utils}):
-            if "video_automation.core.qgis_bridge" in sys.modules:
-                del sys.modules["video_automation.core.qgis_bridge"]
-            from video_automation.core.qgis_bridge import QGISBridge
+            if "narractive.core.qgis_bridge" in sys.modules:
+                del sys.modules["narractive.core.qgis_bridge"]
+            from narractive.core.qgis_bridge import QGISBridge
             bridge = QGISBridge()
             layer = bridge.load_vector_layer("/data/roads.shp", "roads")
             assert layer is not None
@@ -90,9 +90,9 @@ class TestQGISBridgeWithMock:
         qgis_mock, core, utils = _make_qgis_mock()
         core.QgsProject.instance.return_value.mapLayers.return_value = {"id1": MagicMock()}
         with patch.dict(sys.modules, {"qgis": qgis_mock, "qgis.core": core, "qgis.utils": utils}):
-            if "video_automation.core.qgis_bridge" in sys.modules:
-                del sys.modules["video_automation.core.qgis_bridge"]
-            from video_automation.core.qgis_bridge import QGISBridge
+            if "narractive.core.qgis_bridge" in sys.modules:
+                del sys.modules["narractive.core.qgis_bridge"]
+            from narractive.core.qgis_bridge import QGISBridge
             bridge = QGISBridge()
             layers = bridge.get_project_layers()
             assert "id1" in layers
@@ -100,9 +100,9 @@ class TestQGISBridgeWithMock:
     def test_select_features(self):
         qgis_mock, core, utils = _make_qgis_mock()
         with patch.dict(sys.modules, {"qgis": qgis_mock, "qgis.core": core, "qgis.utils": utils}):
-            if "video_automation.core.qgis_bridge" in sys.modules:
-                del sys.modules["video_automation.core.qgis_bridge"]
-            from video_automation.core.qgis_bridge import QGISBridge
+            if "narractive.core.qgis_bridge" in sys.modules:
+                del sys.modules["narractive.core.qgis_bridge"]
+            from narractive.core.qgis_bridge import QGISBridge
             bridge = QGISBridge()
             mock_layer = MagicMock()
             mock_layer.selectedFeatureCount.return_value = 5
@@ -121,9 +121,9 @@ class TestHeadlessRendererNoQGIS:
 
     def test_init_raises_import_error(self):
         with patch.dict(sys.modules, {"qgis": None, "qgis.core": None}):
-            if "video_automation.core.qgis_headless" in sys.modules:
-                del sys.modules["video_automation.core.qgis_headless"]
-            from video_automation.core.qgis_headless import HeadlessRenderer
+            if "narractive.core.qgis_headless" in sys.modules:
+                del sys.modules["narractive.core.qgis_headless"]
+            from narractive.core.qgis_headless import HeadlessRenderer
             with pytest.raises(ImportError):
                 HeadlessRenderer()
 
@@ -137,9 +137,9 @@ class TestQGISSnapshotSaveLoad:
     """QGISSnapshot.save / load / list_snapshots work without PyQGIS."""
 
     def test_save_and_load(self, tmp_path):
-        if "video_automation.core.qgis_snapshot" in sys.modules:
-            del sys.modules["video_automation.core.qgis_snapshot"]
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        if "narractive.core.qgis_snapshot" in sys.modules:
+            del sys.modules["narractive.core.qgis_snapshot"]
+        from narractive.core.qgis_snapshot import QGISSnapshot
 
         snap = QGISSnapshot(
             project_path="/project/my.qgz",
@@ -159,12 +159,12 @@ class TestQGISSnapshotSaveLoad:
         assert loaded.layers[0]["name"] == "roads"
 
     def test_list_snapshots_empty(self, tmp_path):
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        from narractive.core.qgis_snapshot import QGISSnapshot
         result = QGISSnapshot.list_snapshots(tmp_path)
         assert result == []
 
     def test_list_snapshots_finds_files(self, tmp_path):
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        from narractive.core.qgis_snapshot import QGISSnapshot
 
         # Create two fake snapshot files
         (tmp_path / "snap_a.json").write_text("{}")
@@ -178,12 +178,12 @@ class TestQGISSnapshotSaveLoad:
         assert "not_a_snapshot" not in names
 
     def test_snapshot_dir_default(self):
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        from narractive.core.qgis_snapshot import QGISSnapshot
         d = QGISSnapshot.snapshot_dir()
         assert str(d).endswith("snapshots")
 
     def test_snapshot_dir_with_base(self):
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        from narractive.core.qgis_snapshot import QGISSnapshot
         d = QGISSnapshot.snapshot_dir("/some/base")
         assert str(d) == "/some/base/snapshots"
 
@@ -193,9 +193,9 @@ class TestQGISSnapshotCaptureNoQGIS:
 
     def test_capture_raises(self):
         with patch.dict(sys.modules, {"qgis": None, "qgis.core": None}):
-            if "video_automation.core.qgis_snapshot" in sys.modules:
-                del sys.modules["video_automation.core.qgis_snapshot"]
-            from video_automation.core.qgis_snapshot import QGISSnapshot
+            if "narractive.core.qgis_snapshot" in sys.modules:
+                del sys.modules["narractive.core.qgis_snapshot"]
+            from narractive.core.qgis_snapshot import QGISSnapshot
             with pytest.raises(ImportError):
                 QGISSnapshot.capture()
 
@@ -209,38 +209,38 @@ class TestQGISController:
     """create_controller() and _detect_mode() behave correctly."""
 
     def test_create_controller_pyautogui_mode(self):
-        if "video_automation.core.qgis_controller" in sys.modules:
-            del sys.modules["video_automation.core.qgis_controller"]
+        if "narractive.core.qgis_controller" in sys.modules:
+            del sys.modules["narractive.core.qgis_controller"]
         # Mock pyautogui so AutoGUIController can init
         pyautogui_mock = MagicMock()
         with patch.dict(sys.modules, {"pyautogui": pyautogui_mock}):
-            from video_automation.core.qgis_controller import create_controller, AutoGUIController
+            from narractive.core.qgis_controller import create_controller, AutoGUIController
             ctrl = create_controller({"qgis": {"mode": "pyautogui"}})
             assert isinstance(ctrl, AutoGUIController)
 
     def test_create_controller_auto_without_qgis(self):
         """auto mode falls back to pyautogui when qgis is unavailable."""
-        if "video_automation.core.qgis_controller" in sys.modules:
-            del sys.modules["video_automation.core.qgis_controller"]
+        if "narractive.core.qgis_controller" in sys.modules:
+            del sys.modules["narractive.core.qgis_controller"]
         pyautogui_mock = MagicMock()
         with patch.dict(sys.modules, {"qgis": None, "qgis.core": None, "pyautogui": pyautogui_mock}):
-            from video_automation.core.qgis_controller import create_controller, AutoGUIController
+            from narractive.core.qgis_controller import create_controller, AutoGUIController
             ctrl = create_controller({"qgis": {"mode": "auto"}})
             assert isinstance(ctrl, AutoGUIController)
 
     def test_detect_mode_returns_pyautogui_without_qgis(self):
         """_detect_mode() returns 'pyautogui' when qgis is not importable."""
-        if "video_automation.core.qgis_controller" in sys.modules:
-            del sys.modules["video_automation.core.qgis_controller"]
+        if "narractive.core.qgis_controller" in sys.modules:
+            del sys.modules["narractive.core.qgis_controller"]
         with patch.dict(sys.modules, {"qgis": None, "qgis.core": None}):
-            from video_automation.core.qgis_controller import _detect_mode
+            from narractive.core.qgis_controller import _detect_mode
             mode = _detect_mode()
             assert mode == "pyautogui"
 
     def test_create_controller_unknown_mode_raises(self):
-        if "video_automation.core.qgis_controller" in sys.modules:
-            del sys.modules["video_automation.core.qgis_controller"]
-        from video_automation.core.qgis_controller import create_controller
+        if "narractive.core.qgis_controller" in sys.modules:
+            del sys.modules["narractive.core.qgis_controller"]
+        from narractive.core.qgis_controller import create_controller
         with pytest.raises(ValueError, match="Unknown QGIS controller mode"):
             create_controller({"qgis": {"mode": "does_not_exist"}})
 
@@ -259,7 +259,7 @@ class TestQGISConfig:
         except ImportError:
             pytest.skip("pydantic not installed")
 
-        from video_automation.config_schema import QGISConfig  # type: ignore
+        from narractive.config_schema import QGISConfig  # type: ignore
         cfg = QGISConfig()
         assert cfg.mode == "auto"
         assert cfg.prefix_path is None
@@ -271,7 +271,7 @@ class TestQGISConfig:
         except ImportError:
             pytest.skip("pydantic not installed")
 
-        from video_automation.config_schema import NarractiveConfig, QGISConfig  # type: ignore
+        from narractive.config_schema import NarractiveConfig, QGISConfig  # type: ignore
         cfg = NarractiveConfig()
         assert hasattr(cfg, "qgis")
         assert isinstance(cfg.qgis, QGISConfig)
@@ -283,7 +283,7 @@ class TestQGISConfig:
         except ImportError:
             pytest.skip("pydantic not installed")
 
-        from video_automation.config_schema import NarractiveConfig  # type: ignore
+        from narractive.config_schema import NarractiveConfig  # type: ignore
         cfg = NarractiveConfig(qgis={"mode": "headless", "project_path": "/data/my.qgz"})
         assert cfg.qgis.mode == "headless"
         assert cfg.qgis.project_path == "/data/my.qgz"
@@ -299,7 +299,7 @@ class TestCLISnapshotList:
 
     def test_snapshot_list_empty(self, tmp_path, monkeypatch):
         from click.testing import CliRunner
-        from video_automation.cli import snapshot_group
+        from narractive.cli import snapshot_group
 
         # Point snapshot_dir to an empty tmp directory
         monkeypatch.chdir(tmp_path)
@@ -312,7 +312,7 @@ class TestCLISnapshotList:
 
 def _get_snapshot_list_cmd():
     """Retrieve the snapshot list subcommand."""
-    from video_automation.cli import snapshot_group
+    from narractive.cli import snapshot_group
     # snapshot_group.commands['list']
     for name, cmd in snapshot_group.commands.items():
         if name == "list":
@@ -343,7 +343,7 @@ class TestCLIQGISPlugin:
 
     def test_qgis_plugin_help(self):
         from click.testing import CliRunner
-        from video_automation.cli import cmd_qgis_plugin
+        from narractive.cli import cmd_qgis_plugin
         runner = CliRunner()
         result = runner.invoke(cmd_qgis_plugin, ["--help"])
         assert result.exit_code == 0
@@ -351,7 +351,7 @@ class TestCLIQGISPlugin:
 
     def test_qgis_plugin_install_option_present(self):
         from click.testing import CliRunner
-        from video_automation.cli import cmd_qgis_plugin
+        from narractive.cli import cmd_qgis_plugin
         runner = CliRunner()
         result = runner.invoke(cmd_qgis_plugin, ["--help"])
         # --qgis-plugins-dir option should appear in help

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import time
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq04FilteringDemo(VideoSequence):

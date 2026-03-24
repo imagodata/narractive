@@ -5,7 +5,7 @@ FilterMate Video Sequences (Example)
 Auto-discovered from this package and sorted by sequence_id.
 
 Usage:
-    video-automation --sequences-package examples.filtermate.sequences --list
+    narractive --sequences-package examples.filtermate.sequences --list
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import importlib
 import pkgutil
 from pathlib import Path
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 # Auto-discover all VideoSequence subclasses in this package (top-level only).
 _pkg_dir = Path(__file__).parent

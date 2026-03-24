@@ -4,7 +4,7 @@ App Automator
 Controls a desktop application and its UI panels via PyAutoGUI.
 
 Usage:
-    from video_automation.core.app_automator import AppAutomator
+    from narractive.core.app_automator import AppAutomator
     app = AppAutomator(config)
     app.focus_app()
     app.click_at("my_button")

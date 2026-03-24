@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Narration generator for FilterMate — creates TTS audio for all sequences.
-Thin wrapper around video_automation.core.narrator.
+Thin wrapper around narractive.core.narrator.
 
 Uses edge-tts (free Microsoft Neural TTS voices).
 """
@@ -11,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from video_automation.core.narrator import Narrator
+from narractive.core.narrator import Narrator
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output", "narration")
 

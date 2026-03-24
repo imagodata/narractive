@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from video_automation.diagrams.i18n import DiagramLabels
+from narractive.diagrams.i18n import DiagramLabels
 
 
 # ---------------------------------------------------------------------------

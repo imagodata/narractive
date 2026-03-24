@@ -8,8 +8,8 @@ Uses TimelineSequence for narration-synchronized execution.
 """
 from __future__ import annotations
 
-from video_automation.core.timeline import NarrationCue
-from video_automation.sequences.base import TimelineSequence
+from narractive.core.timeline import NarrationCue
+from narractive.sequences.base import TimelineSequence
 
 
 class V01S06Conclusion(TimelineSequence):

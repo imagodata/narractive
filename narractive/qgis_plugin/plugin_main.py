@@ -229,7 +229,7 @@ class NarractiveDocPanel(QDockWidget):
             return
         self._log_message(f"Restoring snapshot: {name}")
         try:
-            from video_automation.core.qgis_snapshot import QGISSnapshot
+            from narractive.core.qgis_snapshot import QGISSnapshot
 
             snap_dir = QGISSnapshot.snapshot_dir()
             snap_path = snap_dir / f"{name}.json"
@@ -245,7 +245,7 @@ class NarractiveDocPanel(QDockWidget):
 
     def _refresh_snapshots(self) -> None:
         """Repopulate the snapshot combo from the snapshots directory."""
-        from video_automation.core.qgis_snapshot import QGISSnapshot
+        from narractive.core.qgis_snapshot import QGISSnapshot
 
         self._combo_snapshots.clear()
         snapshots = QGISSnapshot.list_snapshots()
@@ -256,7 +256,7 @@ class NarractiveDocPanel(QDockWidget):
 
     def _run_narractive_cmd(self, extra_args: list[str]) -> None:
         """Run a ``narractive`` CLI command in a subprocess and log output."""
-        cmd = [sys.executable, "-m", "video_automation"] + extra_args
+        cmd = [sys.executable, "-m", "narractive"] + extra_args
         self._log_message(f"$ {' '.join(cmd)}")
         try:
             proc = subprocess.Popen(

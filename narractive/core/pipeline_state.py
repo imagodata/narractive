@@ -9,7 +9,7 @@ State file location: ``output/.narractive-state.json`` (configurable).
 
 Usage::
 
-    from video_automation.core.pipeline_state import PipelineState
+    from narractive.core.pipeline_state import PipelineState
 
     state = PipelineState.load("output/.narractive-state.json")
     state.start_run(sequences_package="my_project.sequences", total=11)

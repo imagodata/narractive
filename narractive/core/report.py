@@ -9,7 +9,7 @@ Used by the ``narractive report [build_dir]`` CLI command.
 
 Usage::
 
-    from video_automation.core.report import ProductionReport
+    from narractive.core.report import ProductionReport
 
     rpt = ProductionReport(config, build_dir=Path("output"))
     rpt.collect()

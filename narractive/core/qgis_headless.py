@@ -5,7 +5,7 @@ Renders QGIS project maps to PNG files without opening a GUI.
 
 Usage::
 
-    from video_automation.core.qgis_headless import HeadlessRenderer
+    from narractive.core.qgis_headless import HeadlessRenderer
 
     renderer = HeadlessRenderer()
     renderer.render("my_project.qgz", "output.png", size=(1920, 1080))

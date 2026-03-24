@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from video_automation.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
+from narractive.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
 
 
 # ---------------------------------------------------------------------------

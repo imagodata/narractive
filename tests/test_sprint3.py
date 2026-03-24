@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from video_automation.core.narrator import NarrationCache, Narrator
+from narractive.core.narrator import NarrationCache, Narrator
 
 
 # ===========================================================================
@@ -455,7 +455,7 @@ class TestKokoro_Bridge:
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "kokoro_bridge",
-            Path(__file__).parent.parent / "video_automation" / "bridges" / "kokoro_bridge.py",
+            Path(__file__).parent.parent / "narractive" / "bridges" / "kokoro_bridge.py",
         )
         bridge = importlib.util.module_from_spec(spec)
 

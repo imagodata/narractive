@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional
 
 if TYPE_CHECKING:
-    from video_automation.core.narrator import Narrator
+    from narractive.core.narrator import Narrator
 
 logger = logging.getLogger(__name__)
 

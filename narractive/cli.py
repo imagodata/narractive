@@ -7,22 +7,22 @@ UI automation via PyAutoGUI, recording (OBS or headless frame capture),
 and FFmpeg assembly.
 
 Usage (Desktop/OBS mode):
-    python -m video_automation --all                    # Run complete pipeline
-    python -m video_automation --all --from 5           # Resume from sequence 5
-    python -m video_automation --sequence 4             # Run only sequence 4
-    python -m video_automation --setup-obs              # Auto-configure OBS
+    python -m narractive --all                    # Run complete pipeline
+    python -m narractive --all --from 5           # Resume from sequence 5
+    python -m narractive --sequence 4             # Run only sequence 4
+    python -m narractive --setup-obs              # Auto-configure OBS
 
 Usage (Docker/headless frame capture):
-    python -m video_automation --capture --all          # Frame capture mode
-    python -m video_automation --capture --all --capture-fps 15
+    python -m narractive --capture --all          # Frame capture mode
+    python -m narractive --capture --all --capture-fps 15
 
 Common:
-    python -m video_automation --diagrams               # Generate diagrams only
-    python -m video_automation --narration              # Generate narration audio
-    python -m video_automation --calibrate              # Interactive UI calibration
-    python -m video_automation --assemble               # Assemble final video
-    python -m video_automation --dry-run                # Preview without executing
-    python -m video_automation --list                   # List all sequences
+    python -m narractive --diagrams               # Generate diagrams only
+    python -m narractive --narration              # Generate narration audio
+    python -m narractive --calibrate              # Interactive UI calibration
+    python -m narractive --assemble               # Assemble final video
+    python -m narractive --dry-run                # Preview without executing
+    python -m narractive --list                   # List all sequences
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("video_automation")
+logger = logging.getLogger("narractive")
 
 
 # ── Config loader ──────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ def load_config(config_path: Path) -> dict:
         cfg = yaml.safe_load(f)
     logger.debug("Config loaded from %s", config_path)
     try:
-        from video_automation.config_schema import validate_config_and_warn
+        from narractive.config_schema import validate_config_and_warn
 
         validate_config_and_warn(cfg)
     except ImportError:
@@ -86,7 +86,7 @@ def load_sequences_from_package(package_path: str) -> list:
     import importlib
     import pkgutil
 
-    from video_automation.sequences.base import VideoSequence
+    from narractive.sequences.base import VideoSequence
 
     # Import the package
     pkg = importlib.import_module(package_path)
@@ -204,7 +204,7 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, resume, reset_state
 
     # Dispatch
     if reset_state:
-        from video_automation.core.pipeline_state import PipelineState
+        from narractive.core.pipeline_state import PipelineState
         state = PipelineState.from_config(cfg)
         state.delete()
         click.echo("Pipeline state reset.")
@@ -212,7 +212,7 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, resume, reset_state
             return
 
     if show_status:
-        from video_automation.core.pipeline_state import PipelineState
+        from narractive.core.pipeline_state import PipelineState
         state = PipelineState.from_config(cfg)
         click.echo(state.status_table())
         return
@@ -314,7 +314,7 @@ def cmd_diagrams(config: dict, dry_run: bool, diagrams_module: str | None = None
     mod = importlib.import_module(diagrams_module)
     DIAGRAMS = mod.DIAGRAMS
 
-    from video_automation.core.diagram_generator import DiagramGenerator
+    from narractive.core.diagram_generator import DiagramGenerator
     gen = DiagramGenerator(config.get("diagrams", {}))
     out_dir = Path(config.get("diagrams", {}).get("output_dir", "output/diagrams"))
 
@@ -341,8 +341,8 @@ def cmd_subtitles(
     lang: str | None = None, narrations_dir: str | None = None,
 ) -> None:
     """Generate SRT subtitle files from narration texts."""
-    from video_automation.core.narrator import load_narrations_multilingual
-    from video_automation.core.subtitles import SubtitleGenerator
+    from narractive.core.narrator import load_narrations_multilingual
+    from narractive.core.subtitles import SubtitleGenerator
 
     sub_cfg = config.get("subtitles", {})
     if not sub_cfg.get("enabled", True):
@@ -397,7 +397,7 @@ def cmd_subtitles(
 def cmd_narration(config: dict, dry_run: bool, video: str | None = None,
                   narrations_file: str | None = None, force: bool = False) -> None:
     """Generate TTS narration audio for all sequences."""
-    from video_automation.core.narrator import Narrator, get_narration_texts
+    from narractive.core.narrator import Narrator, get_narration_texts
 
     if not narrations_file:
         narrations_file = "narrations.yaml"
@@ -468,7 +468,7 @@ def cmd_run_all(
     resume: bool = False,
 ) -> None:
     """Run the complete video production pipeline."""
-    from video_automation.core.pipeline_state import PipelineState
+    from narractive.core.pipeline_state import PipelineState
 
     SEQUENCES = _load_sequences(seq_pkg)
     backend = "FrameCapture" if use_capture else "OBS"
@@ -603,7 +603,7 @@ def cmd_assemble(
     timeline_results: list[tuple[str, object]] | None = None,
 ) -> None:
     """Assemble final video from recorded clips + narration."""
-    from video_automation.core.video_assembler import VideoAssembler
+    from narractive.core.video_assembler import VideoAssembler
 
     out_cfg = config.get("output", {})
     assembler = VideoAssembler(out_cfg)
@@ -655,13 +655,13 @@ def cmd_assemble(
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 def _init_controllers(config: dict, use_capture: bool = False):
-    from video_automation.core.app_automator import AppAutomator
+    from narractive.core.app_automator import AppAutomator
 
     if use_capture:
-        from video_automation.core.frame_capturer import FrameCapturer
+        from narractive.core.frame_capturer import FrameCapturer
         recorder = FrameCapturer(config.get("capture", {}))
     else:
-        from video_automation.core.obs_controller import OBSController
+        from narractive.core.obs_controller import OBSController
         recorder = OBSController(config.get("obs", {}))
 
     app = AppAutomator(config)
@@ -732,7 +732,7 @@ if __name__ == "__main__":
 )
 def cmd_init(project_dir: str, no_interactive: bool) -> None:
     """Scaffold a new Narractive project directory."""
-    from video_automation.scripts.init_project import scaffold_project
+    from narractive.scripts.init_project import scaffold_project
 
     project_path = Path(project_dir).resolve()
     dir_name = project_path.name or "my_project"
@@ -786,7 +786,7 @@ def cmd_init(project_dir: str, no_interactive: bool) -> None:
 )
 def cmd_validate_config(config_path: str) -> None:
     """Validate config.yaml against the Narractive schema."""
-    from video_automation.config_schema import is_pydantic_available, validate_config
+    from narractive.config_schema import is_pydantic_available, validate_config
 
     if not is_pydantic_available():
         click.echo("pydantic is not installed. Install with:\n  pip install 'narractive[config]'")
@@ -834,7 +834,7 @@ def cmd_preview(
     """Preview narration audio for one or all sequences."""
     import time as _time
 
-    from video_automation.core.narrator import Narrator, load_narrations_multilingual
+    from narractive.core.narrator import Narrator, load_narrations_multilingual
 
     cfg = load_config(Path(config_path))
     narr_cfg = cfg.get("narration", {})
@@ -976,7 +976,7 @@ def cmd_report(
     """
     import json as _json
 
-    from video_automation.core.report import ProductionReport
+    from narractive.core.report import ProductionReport
 
     cfg = load_config(Path(config_path))
     build_path = Path(build_dir).resolve()
@@ -1015,7 +1015,7 @@ def snapshot_capture(name: str) -> None:
     The snapshot is saved to diagrams/snapshots/<NAME>.json.
     Requires a running QGIS session with PyQGIS available.
     """
-    from video_automation.core.qgis_snapshot import QGISSnapshot
+    from narractive.core.qgis_snapshot import QGISSnapshot
 
     try:
         snap = QGISSnapshot.capture()
@@ -1037,7 +1037,7 @@ def snapshot_restore(name: str) -> None:
     Looks for diagrams/snapshots/<NAME>.json.
     Requires a running QGIS session with PyQGIS available.
     """
-    from video_automation.core.qgis_snapshot import QGISSnapshot
+    from narractive.core.qgis_snapshot import QGISSnapshot
 
     snap_path = QGISSnapshot.snapshot_dir() / f"{name}.json"
     if not snap_path.exists():
@@ -1059,7 +1059,7 @@ def snapshot_restore(name: str) -> None:
 @snapshot_group.command("list")
 def snapshot_list() -> None:
     """List all available QGIS map snapshots."""
-    from video_automation.core.qgis_snapshot import QGISSnapshot
+    from narractive.core.qgis_snapshot import QGISSnapshot
 
     snapshots = QGISSnapshot.list_snapshots()
     if not snapshots:
@@ -1125,7 +1125,7 @@ def cmd_qgis_plugin(action: str, qgis_plugins_dir: str | None) -> None:
     import shutil
 
     if action == "install":
-        # Source: video_automation/qgis_plugin/
+        # Source: narractive/qgis_plugin/
         src = Path(__file__).parent / "qgis_plugin"
         if not src.exists():
             click.echo(f"  !! Plugin source not found: {src}")

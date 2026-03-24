@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from video_automation.core.frame_capturer import FrameCapturer
+from narractive.core.frame_capturer import FrameCapturer
 
 
 # ---------------------------------------------------------------------------

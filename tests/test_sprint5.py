@@ -18,7 +18,7 @@ import pytest
 # Issue #12 — Pipeline state persistence
 # ===========================================================================
 
-from video_automation.core.pipeline_state import (
+from narractive.core.pipeline_state import (
     PipelineState,
     STATUS_COMPLETED,
     STATUS_FAILED,
@@ -171,7 +171,7 @@ class TestPipelineStateBasics:
 # Issue #13 — Plugin architecture for custom TTS engines
 # ===========================================================================
 
-from video_automation.core.tts_base import (
+from narractive.core.tts_base import (
     TTSEngine,
     register_tts_engine,
     get_tts_engine,
@@ -288,7 +288,7 @@ class TestNarratorPluginIntegration:
         _REGISTRY.pop("mock-test-engine-sprint5", None)
 
     def test_narrator_uses_registered_plugin(self, tmp_path):
-        from video_automation.core.narrator import Narrator
+        from narractive.core.narrator import Narrator
 
         register_tts_engine(_MockEngine)
         narrator = Narrator({"engine": "mock-test-engine-sprint5",
@@ -298,7 +298,7 @@ class TestNarratorPluginIntegration:
         assert result.exists()
 
     def test_narrator_raises_for_unknown_engine(self, tmp_path):
-        from video_automation.core.narrator import Narrator
+        from narractive.core.narrator import Narrator
 
         narrator = Narrator({"engine": "totally-unknown-xyz-engine",
                               "output_dir": str(tmp_path)})
@@ -306,7 +306,7 @@ class TestNarratorPluginIntegration:
             narrator.generate_narration("test", tmp_path / "out.mp3")
 
     def test_register_tts_engine_importable_from_narrator(self):
-        from video_automation.core.narrator import register_tts_engine as rte
+        from narractive.core.narrator import register_tts_engine as rte
         assert callable(rte)
 
 
@@ -314,7 +314,7 @@ class TestNarratorPluginIntegration:
 # Issue #14 — Production summary / report command
 # ===========================================================================
 
-from video_automation.core.report import (
+from narractive.core.report import (
     ProductionReport,
     SequenceEntry,
     _fmt_duration,
@@ -459,7 +459,7 @@ class TestProductionReport:
 # ===========================================================================
 
 from click.testing import CliRunner
-from video_automation.cli import cli
+from narractive.cli import cli
 
 
 class TestCLIStatus:

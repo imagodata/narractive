@@ -10,7 +10,7 @@ them to PNG.  Multiple rendering backends are supported:
 
 Usage::
 
-    from video_automation.core.diagram_generator import DiagramGenerator
+    from narractive.core.diagram_generator import DiagramGenerator
     gen = DiagramGenerator(config["diagrams"])
 
     # HTML + Playwright (original)

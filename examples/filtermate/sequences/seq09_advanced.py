@@ -7,7 +7,7 @@ Diagrammes 11 (Undo/Redo) et 12 (Métriques Qualité).
 
 from __future__ import annotations
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq09Advanced(VideoSequence):

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
 
-from video_automation.core.narrator import (
+from narractive.core.narrator import (
     Narrator,
     _get_audio_info,
     postprocess_audio,
@@ -276,14 +276,14 @@ class TestPostprocessAudio:
 
 
 class TestPrepareReferenceAudio:
-    @patch("video_automation.core.narrator._get_audio_info", return_value={})
+    @patch("narractive.core.narrator._get_audio_info", return_value={})
     def test_no_ffprobe(self, mock_info, tmp_path):
         ref = tmp_path / "ref.wav"
         ref.touch()
         result = prepare_reference_audio(ref)
         assert result == ref
 
-    @patch("video_automation.core.narrator._get_audio_info")
+    @patch("narractive.core.narrator._get_audio_info")
     def test_already_conformant(self, mock_info, tmp_path):
         ref = tmp_path / "ref.wav"
         ref.touch()
@@ -297,7 +297,7 @@ class TestPrepareReferenceAudio:
         assert result == ref
 
     @patch("subprocess.run")
-    @patch("video_automation.core.narrator._get_audio_info")
+    @patch("narractive.core.narrator._get_audio_info")
     def test_needs_conversion(self, mock_info, mock_run, tmp_path):
         ref = tmp_path / "ref.wav"
         ref.touch()
@@ -313,7 +313,7 @@ class TestPrepareReferenceAudio:
         result = prepare_reference_audio(ref)
         assert result == prepared
 
-    @patch("video_automation.core.narrator._get_audio_info")
+    @patch("narractive.core.narrator._get_audio_info")
     def test_too_short_warning(self, mock_info, tmp_path):
         ref = tmp_path / "ref.wav"
         ref.touch()
@@ -327,7 +327,7 @@ class TestPrepareReferenceAudio:
         result = prepare_reference_audio(ref, min_duration=3.0)
         assert result == ref
 
-    @patch("video_automation.core.narrator._get_audio_info")
+    @patch("narractive.core.narrator._get_audio_info")
     def test_cached_prepared_reused(self, mock_info, tmp_path):
         ref = tmp_path / "ref.wav"
         ref.write_text("original")

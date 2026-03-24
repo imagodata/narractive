@@ -1,5 +1,5 @@
 ---
-name: video-automation
+name: narractive
 description: Expert video automation - generation de videos, sequences, OBS, PyAutoGUI, montage automatise
 model: sonnet
 ---

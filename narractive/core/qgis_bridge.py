@@ -7,7 +7,7 @@ current environment.
 
 Usage::
 
-    from video_automation.core.qgis_bridge import QGISBridge
+    from narractive.core.qgis_bridge import QGISBridge
 
     bridge = QGISBridge()
     layer = bridge.load_vector_layer("/path/to/file.shp", "my_layer")

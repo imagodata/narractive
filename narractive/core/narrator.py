@@ -11,7 +11,7 @@ TTS pronunciation of acronyms, numbers, and proper nouns.
 
 Usage::
 
-    from video_automation.core.narrator import Narrator
+    from narractive.core.narrator import Narrator
     narrator = Narrator(config["narration"])
     path = narrator.generate_narration("Your text here", "output/narration/seq00.mp3")
     duration = narrator.get_narration_duration(path)
@@ -33,9 +33,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from video_automation.core.text_preprocessor import TextPreprocessor
-# Re-export for convenience: `from video_automation.core.narrator import register_tts_engine`
-from video_automation.core.tts_base import register_tts_engine as register_tts_engine  # noqa: F401
+from narractive.core.text_preprocessor import TextPreprocessor
+# Re-export for convenience: `from narractive.core.narrator import register_tts_engine`
+from narractive.core.tts_base import register_tts_engine as register_tts_engine  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -419,7 +419,7 @@ class Narrator:
         The 'narration' section from config.yaml.
     pronunciation_config : dict | None
         The ``pronunciation`` section from config.yaml. When provided, a
-        :class:`~video_automation.core.text_preprocessor.TextPreprocessor`
+        :class:`~narractive.core.text_preprocessor.TextPreprocessor`
         is created to transform text before sending it to the TTS engine.
         See :class:`TextPreprocessor` for the expected YAML structure.
     """
@@ -1014,12 +1014,12 @@ class Narrator:
         self, text: str, output_path: Path, lang: str = "fr"
     ) -> "Path | None":
         """
-        Attempt to generate audio using a registered :class:`~video_automation.core.tts_base.TTSEngine` plugin.
+        Attempt to generate audio using a registered :class:`~narractive.core.tts_base.TTSEngine` plugin.
 
         Returns the output :class:`Path` on success, or ``None`` when no plugin
         is registered for ``self.engine``.
         """
-        from video_automation.core.tts_base import get_tts_engine, load_entry_point_plugins
+        from narractive.core.tts_base import get_tts_engine, load_entry_point_plugins
 
         # Ensure entry-point plugins are loaded (idempotent)
         load_entry_point_plugins()

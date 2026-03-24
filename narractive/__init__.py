@@ -20,6 +20,6 @@ try:
     __version__ = version("narractive")
 except PackageNotFoundError:
     try:
-        __version__ = version("video-automation")
+        __version__ = version("narractive")
     except PackageNotFoundError:
         __version__ = "2.0.0"

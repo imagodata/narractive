@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from video_automation.cli import load_config, load_sequences_from_package
+from narractive.cli import load_config, load_sequences_from_package
 
 
 # ---------------------------------------------------------------------------
@@ -69,14 +69,14 @@ class TestCLIDispatch:
 
     def test_cli_no_args_shows_help(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, ["--config", str(config_file)])
         assert result.exit_code == 0
 
     def test_cli_list_without_package(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, ["--config", str(config_file), "--list"])
         # Should fail because no --sequences-package
@@ -84,14 +84,14 @@ class TestCLIDispatch:
 
     def test_cli_diagrams_without_module(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, ["--config", str(config_file), "--diagrams"])
         assert result.exit_code != 0 or "No --diagrams-module" in (result.output or "")
 
     def test_cli_dry_run_flag(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, [
             "--config", str(config_file),
@@ -101,7 +101,7 @@ class TestCLIDispatch:
 
     def test_cli_verbose_flag(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, [
             "--config", str(config_file),
@@ -112,7 +112,7 @@ class TestCLIDispatch:
 
     def test_cli_narration_dry_run(self, config_file, tmp_path):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         # Create a narrations.yaml
         narr_file = tmp_path / "narrations.yaml"
         narr_file.write_text(yaml.dump({"original": {"seq01": "Hello"}}))
@@ -126,7 +126,7 @@ class TestCLIDispatch:
 
     def test_cli_subtitles_no_narrations_dir(self, config_file, tmp_path):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, [
             "--config", str(config_file),
@@ -139,12 +139,12 @@ class TestCLIDispatch:
 
     def test_cli_assemble_dry_run(self, config_file, tmp_path):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         # Create a fake MKV clip so the assemble command has something to find
         videos_dir = tmp_path / "videos"
         videos_dir.mkdir()
         (videos_dir / "clip.mkv").touch()
-        with patch("video_automation.core.video_assembler._check_ffmpeg"):
+        with patch("narractive.core.video_assembler._check_ffmpeg"):
             runner = CliRunner()
             result = runner.invoke(cli, [
                 "--config", str(config_file),
@@ -156,7 +156,7 @@ class TestCLIDispatch:
 
     def test_cli_sequence_out_of_range(self, config_file):
         from click.testing import CliRunner
-        from video_automation.cli import cli
+        from narractive.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, [
             "--config", str(config_file),

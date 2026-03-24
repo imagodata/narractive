@@ -20,8 +20,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Optional, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from video_automation.core.app_automator import AppAutomator
-    from video_automation.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
+    from narractive.core.app_automator import AppAutomator
+    from narractive.core.timeline import NarrationCue, TimelineExecutor, TimelineResult
 
 
 @runtime_checkable
@@ -217,8 +217,8 @@ class TimelineSequence(VideoSequence):
 
     def execute(self, obs: "Recorder", app: "AppAutomator", config: dict) -> None:
         """Execute the timeline: prepare narration audio, then run cues."""
-        from video_automation.core.narrator import Narrator
-        from video_automation.core.timeline import TimelineExecutor
+        from narractive.core.narrator import Narrator
+        from narractive.core.timeline import TimelineExecutor
 
         cues = self.build_timeline(obs, app, config)
         if not cues:

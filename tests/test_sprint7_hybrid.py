@@ -65,7 +65,7 @@ class TestHybridControllerGeoToScreen:
     def test_centre_maps_to_canvas_centre(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -81,7 +81,7 @@ class TestHybridControllerGeoToScreen:
     def test_top_left_geo_maps_to_top_left_screen(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -97,7 +97,7 @@ class TestHybridControllerGeoToScreen:
     def test_bottom_right_geo_maps_to_bottom_right_screen(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -113,7 +113,7 @@ class TestHybridControllerGeoToScreen:
     def test_out_of_bounds_geo_clamped_to_canvas(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -129,7 +129,7 @@ class TestHybridControllerGeoToScreen:
     def test_canvas_region_offset_applied(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -146,7 +146,7 @@ class TestHybridControllerGeoToScreen:
         mods, iface, canvas, extent = _mock_env()
         # Remove iface so we test the canvas_region=None path
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {}}  # no canvas_region
             ctrl = HybridController(config)
@@ -160,7 +160,7 @@ class TestHybridControllerMouseMethods:
     def test_point_at_map_coordinate_calls_move_mouse(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -178,7 +178,7 @@ class TestHybridControllerMouseMethods:
     def test_point_at_map_coordinate_list_calls_multiple(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {
                 "qgis": {
@@ -198,7 +198,7 @@ class TestHybridControllerMouseMethods:
     def test_hover_region_delegates(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {}}
             ctrl = HybridController(config)
@@ -215,7 +215,7 @@ class TestHybridControllerQGISMethods:
     def test_load_layer_delegates_to_bridge(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {}}
             ctrl = HybridController(config)
@@ -229,7 +229,7 @@ class TestHybridControllerQGISMethods:
     def test_select_features_delegates_to_bridge(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {}}
             ctrl = HybridController(config)
@@ -243,7 +243,7 @@ class TestHybridControllerQGISMethods:
     def test_run_algorithm_delegates_to_bridge(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {}}
             ctrl = HybridController(config)
@@ -260,8 +260,8 @@ class TestCreateControllerHybridMode:
     def test_factory_hybrid_mode(self):
         mods, iface, canvas, extent = _mock_env()
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_controller import create_controller
-            from video_automation.core.qgis_hybrid import HybridController
+            from narractive.core.qgis_controller import create_controller
+            from narractive.core.qgis_hybrid import HybridController
 
             config = {"qgis": {"mode": "hybrid"}}
             ctrl = create_controller(config)
@@ -271,7 +271,7 @@ class TestCreateControllerHybridMode:
         mods, iface, canvas, extent = _mock_env()
         import pytest
         with patch.dict(sys.modules, mods):
-            from video_automation.core.qgis_controller import create_controller
+            from narractive.core.qgis_controller import create_controller
 
             with pytest.raises(ValueError, match="Unknown QGIS controller mode"):
                 create_controller({"qgis": {"mode": "invalid"}})

@@ -65,12 +65,12 @@ class HybridController:
             QGIS installation prefix (optional, passed to QgsApplication).
 
         All other keys under ``config['app']`` / ``config['timing']`` are
-        forwarded to :class:`~video_automation.core.app_automator.AppAutomator`.
+        forwarded to :class:`~narractive.core.app_automator.AppAutomator`.
     """
 
     def __init__(self, config: dict | None = None) -> None:
-        from video_automation.core.qgis_bridge import QGISBridge
-        from video_automation.core.app_automator import AppAutomator
+        from narractive.core.qgis_bridge import QGISBridge
+        from narractive.core.app_automator import AppAutomator
 
         self._config = config or {}
         self._qgis_cfg: dict = self._config.get("qgis", {})

@@ -1,1 +1,1 @@
-"""Tests for the video_automation package."""
+"""Tests for the narractive package."""

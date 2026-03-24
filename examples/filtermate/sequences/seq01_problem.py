@@ -7,7 +7,7 @@ Diagramme 1 affiché après la narration.
 
 from __future__ import annotations
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq01Problem(VideoSequence):

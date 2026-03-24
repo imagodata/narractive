@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from video_automation.sequences.base import Recorder, TimelineSequence, VideoSequence
+from narractive.sequences.base import Recorder, TimelineSequence, VideoSequence
 
 
 # ---------------------------------------------------------------------------

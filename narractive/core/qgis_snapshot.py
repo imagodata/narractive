@@ -12,7 +12,7 @@ QGIS session.
 Usage::
 
     # Inside a QGIS Python console or PyQGIS script:
-    from video_automation.core.qgis_snapshot import QGISSnapshot
+    from narractive.core.qgis_snapshot import QGISSnapshot
 
     snap = QGISSnapshot.capture()
     snap.save("my_snapshot")

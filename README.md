@@ -59,7 +59,7 @@ docker compose run --rm video --all --sequences-package my_project.sequences
 
 ```
 narractive/
-├── video_automation/              # Framework (pip-installable)
+├── narractive/              # Framework (pip-installable)
 │   ├── core/                      # Generic modules
 │   │   ├── app_automator.py      # PyAutoGUI + window control
 │   │   ├── obs_controller.py     # OBS WebSocket 5.x
@@ -96,7 +96,7 @@ narractive/
 ### 1. Simple sequence (manual timing)
 
 ```python
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 class MyIntro(VideoSequence):
     name = "Introduction"
@@ -114,8 +114,8 @@ class MyIntro(VideoSequence):
 ### 2. Timeline sequence (narration-synchronized)
 
 ```python
-from video_automation.sequences.base import TimelineSequence
-from video_automation.core.timeline import NarrationCue
+from narractive.sequences.base import TimelineSequence
+from narractive.core.timeline import NarrationCue
 
 class MyDemo(TimelineSequence):
     name = "Live Demo"
@@ -140,7 +140,7 @@ class MyDemo(TimelineSequence):
 ### 3. Multilingual diagram labels
 
 ```python
-from video_automation.diagrams.i18n import DiagramLabels
+from narractive.diagrams.i18n import DiagramLabels
 
 labels = DiagramLabels(
     labels={

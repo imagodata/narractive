@@ -16,7 +16,7 @@ Pipeline: UI interaction (PyAutoGUI) → recording (OBS / headless Xvfb) → nar
 - Docker support (QGIS + Xvfb headless)
 
 ## Structure
-- `video_automation/` — Framework (pip-installable)
+- `narractive/` — Framework (pip-installable)
   - `core/` — narrator, qgis_automator, obs_controller, frame_capturer, timeline, diagram_generator, video_assembler
   - `sequences/base.py` — VideoSequence (ABC) + TimelineSequence
   - `cli.py` — Click-based CLI entry point
@@ -29,10 +29,10 @@ Pipeline: UI interaction (PyAutoGUI) → recording (OBS / headless Xvfb) → nar
 
 ## Commands
 - `pip install -e .` — Install in dev mode
-- `video-automation --list --sequences-package examples.filtermate.sequences`
-- `video-automation --narration --narrations-file narrations.yaml`
-- `video-automation --diagrams --diagrams-module examples.filtermate.diagrams.mermaid_definitions`
-- `video-automation --all --sequences-package examples.filtermate.sequences`
+- `narractive --list --sequences-package examples.filtermate.sequences`
+- `narractive --narration --narrations-file narrations.yaml`
+- `narractive --diagrams --diagrams-module examples.filtermate.diagrams.mermaid_definitions`
+- `narractive --all --sequences-package examples.filtermate.sequences`
 - `docker compose run --rm video --all`
 
 ## Style

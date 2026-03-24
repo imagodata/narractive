@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from video_automation.core.text_preprocessor import TextPreprocessor
+from narractive.core.text_preprocessor import TextPreprocessor
 
 
 # ---------------------------------------------------------------------------

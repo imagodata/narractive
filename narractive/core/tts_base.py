@@ -3,12 +3,12 @@ TTS Engine Plugin Base — Abstract interface for custom TTS engines
 ==================================================================
 Defines the :class:`TTSEngine` abstract base class that third-party TTS
 engines must implement, and the :func:`register_tts_engine` /
-:func:`get_tts_engine` registry functions used by :class:`~video_automation.core.narrator.Narrator`.
+:func:`get_tts_engine` registry functions used by :class:`~narractive.core.narrator.Narrator`.
 
 Quick start::
 
     from pathlib import Path
-    from video_automation.core.tts_base import TTSEngine, register_tts_engine
+    from narractive.core.tts_base import TTSEngine, register_tts_engine
 
     class MyEngine(TTSEngine):
         engine_name = "my-engine"

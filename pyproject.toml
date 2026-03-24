@@ -59,18 +59,17 @@ dev = [
 ]
 
 [project.scripts]
-narractive = "video_automation.cli:main"
-video-automation = "video_automation.cli:main"
+narractive = "narractive.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/imagodata/narractive"
 Repository = "https://github.com/imagodata/narractive"
 
 [tool.setuptools.packages.find]
-include = ["video_automation*"]
+include = ["narractive*"]
 
 [tool.setuptools.package-data]
-video_automation = ["diagrams/*.html"]
+narractive = ["diagrams/*.html"]
 
 # ── Ruff ──────────────────────────────────────────────────────────────────────
 
@@ -83,7 +82,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["video_automation"]
+known-first-party = ["narractive"]
 
 # ── Mypy ──────────────────────────────────────────────────────────────────────
 

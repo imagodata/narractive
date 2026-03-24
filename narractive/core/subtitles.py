@@ -9,13 +9,13 @@ line width and line count, and per-language WPM defaults.
 
 Usage::
 
-    from video_automation.core.subtitles import SubtitleGenerator
+    from narractive.core.subtitles import SubtitleGenerator
 
     gen = SubtitleGenerator(config["subtitles"])
     gen.generate_for_sequence("seq01", narration_text, output_path, lang="fr")
 
     # Or use the low-level function directly:
-    from video_automation.core.subtitles import generate_srt
+    from narractive.core.subtitles import generate_srt
     srt_content = generate_srt("Your narration text here.", wpm=155)
 """
 

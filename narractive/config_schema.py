@@ -5,7 +5,7 @@ Pydantic v2 models for validating config.yaml.
 
 Usage::
 
-    from video_automation.config_schema import validate_config
+    from narractive.config_schema import validate_config
 
     cfg = validate_config(raw_dict)   # returns NarractiveConfig or raises
 """

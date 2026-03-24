@@ -6,7 +6,7 @@ Visuel: Logo FilterMate, liens GitHub / QGIS Plugin Store / docs.
 
 from __future__ import annotations
 
-from video_automation.sequences.base import VideoSequence
+from narractive.sequences.base import VideoSequence
 
 
 class Seq10Conclusion(VideoSequence):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Diagram generator for FilterMate — creates HTML + PNG from Mermaid definitions.
-Thin wrapper around video_automation.core.diagram_generator.
+Thin wrapper around narractive.core.diagram_generator.
 
 No OBS required. Just Python + Playwright (optional for PNG).
 """
@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from diagrams.mermaid_definitions import DIAGRAMS
-from video_automation.core.diagram_generator import DiagramGenerator
+from narractive.core.diagram_generator import DiagramGenerator
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output", "diagrams")
 

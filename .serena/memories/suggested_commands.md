@@ -5,14 +5,14 @@
 - `pip install -e ".[all]"` — With all optional deps
 
 ## CLI
-- `video-automation --help`
-- `video-automation --list --sequences-package examples.filtermate.sequences`
-- `video-automation --narration --narrations-file examples/filtermate/narrations.yaml`
-- `video-automation --diagrams --diagrams-module examples.filtermate.diagrams.mermaid_definitions`
-- `video-automation --calibrate --config config.yaml`
-- `video-automation --all --sequences-package examples.filtermate.sequences --config config.yaml`
-- `video-automation --assemble --video v01`
-- `video-automation --dry-run --all --sequences-package examples.filtermate.sequences`
+- `narractive --help`
+- `narractive --list --sequences-package examples.filtermate.sequences`
+- `narractive --narration --narrations-file examples/filtermate/narrations.yaml`
+- `narractive --diagrams --diagrams-module examples.filtermate.diagrams.mermaid_definitions`
+- `narractive --calibrate --config config.yaml`
+- `narractive --all --sequences-package examples.filtermate.sequences --config config.yaml`
+- `narractive --assemble --video v01`
+- `narractive --dry-run --all --sequences-package examples.filtermate.sequences`
 
 ## Docker
 - `docker compose build`

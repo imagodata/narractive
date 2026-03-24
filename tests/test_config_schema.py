@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from video_automation.config_schema import is_pydantic_available, validate_config
+from narractive.config_schema import is_pydantic_available, validate_config
 
 PYDANTIC_AVAILABLE = is_pydantic_available()
 
@@ -112,20 +112,20 @@ class TestValidateConfig:
 class TestValidateConfigAndWarn:
     def test_validate_config_and_warn_importable(self):
         """validate_config_and_warn should be importable from config_schema."""
-        from video_automation.config_schema import validate_config_and_warn
+        from narractive.config_schema import validate_config_and_warn
 
         assert callable(validate_config_and_warn)
 
     def test_validate_config_and_warn_valid_config_no_exit(self):
         """validate_config_and_warn with a valid config should not raise SystemExit."""
-        from video_automation.config_schema import validate_config_and_warn
+        from narractive.config_schema import validate_config_and_warn
 
         # Should not raise
         validate_config_and_warn(FULL_VALID_CONFIG)
 
     def test_validate_config_and_warn_none_config(self):
         """validate_config_and_warn with None should either warn or exit."""
-        from video_automation.config_schema import validate_config_and_warn
+        from narractive.config_schema import validate_config_and_warn
 
         if not PYDANTIC_AVAILABLE:
             # No pydantic — just warn, no exit

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 
-from video_automation.core.obs_controller import OBSController
+from narractive.core.obs_controller import OBSController
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ class TestOBSControllerConnection:
         obs.disconnect()
         assert obs._client is None
 
-    @patch("video_automation.core.obs_controller.time.sleep")
+    @patch("narractive.core.obs_controller.time.sleep")
     def test_connect_import_error(self, mock_sleep):
         obs = OBSController({})
         with patch.dict("sys.modules", {"obsws_python": None}):
@@ -244,7 +244,7 @@ class TestOBSConvenience:
 
 
 class TestOBSWaitForRecording:
-    @patch("video_automation.core.obs_controller.time.sleep")
+    @patch("narractive.core.obs_controller.time.sleep")
     def test_wait_success(self, mock_sleep):
         obs = OBSController({})
         obs._client = MagicMock()
@@ -254,7 +254,7 @@ class TestOBSWaitForRecording:
         obs._client.get_record_status.return_value = resp
         obs.wait_for_recording_start(timeout=5.0)
 
-    @patch("video_automation.core.obs_controller.time.sleep")
+    @patch("narractive.core.obs_controller.time.sleep")
     def test_wait_timeout(self, mock_sleep):
         obs = OBSController({})
         obs._client = MagicMock()

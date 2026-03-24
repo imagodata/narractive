@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from video_automation.core.subtitles import (
+from narractive.core.subtitles import (
     SubtitleGenerator,
     count_words,
     estimate_duration,

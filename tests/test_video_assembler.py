@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from video_automation.core.video_assembler import (
+from narractive.core.video_assembler import (
     QUALITY_PRESETS,
     VideoAssembler,
     _check_ffmpeg,
@@ -117,7 +117,7 @@ class TestQualityPresets:
 
 
 class TestVideoAssemblerInit:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_defaults(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path / "final")})
         assert va.resolution == "1920x1080"
@@ -126,7 +126,7 @@ class TestVideoAssemblerInit:
         assert va.quality == "23"
         assert (tmp_path / "final").is_dir()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_custom_config(self, mock_check, tmp_path):
         va = VideoAssembler({
             "final_dir": str(tmp_path / "out"),
@@ -147,16 +147,16 @@ class TestVideoAssemblerInit:
 
 
 class TestVideoAssemblerRemux:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_remux_default_path(self, mock_ffmpeg, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         result = va.remux_mkv_to_mp4(tmp_path / "video.mkv")
         assert result == tmp_path / "video.mp4"
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_remux_custom_path(self, mock_ffmpeg, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         result = va.remux_mkv_to_mp4(tmp_path / "video.mkv", tmp_path / "custom.mp4")
@@ -169,8 +169,8 @@ class TestVideoAssemblerRemux:
 
 
 class TestVideoAssemblerDiagramOverlay:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_no_diagrams_copies_source(self, mock_ffmpeg, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         source = tmp_path / "source.mp4"
@@ -181,7 +181,7 @@ class TestVideoAssemblerDiagramOverlay:
         assert output.read_bytes() == b"fake video"
         mock_ffmpeg.assert_not_called()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_mismatched_lengths_raises(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         with pytest.raises(ValueError, match="same length"):
@@ -199,7 +199,7 @@ class TestVideoAssemblerDiagramOverlay:
 
 
 class TestVideoAssemblerIntroOutro:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_single_clip_copies(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         video = tmp_path / "main.mp4"
@@ -209,8 +209,8 @@ class TestVideoAssemblerIntroOutro:
         assert result == output
         assert output.read_bytes() == b"main video"
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
-    @patch("video_automation.core.video_assembler._run_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._run_ffmpeg")
     def test_with_intro_and_outro(self, mock_ffmpeg, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         video = tmp_path / "main.mp4"
@@ -223,7 +223,7 @@ class TestVideoAssemblerIntroOutro:
         va.add_intro_outro(video, intro, outro, output)
         mock_ffmpeg.assert_called_once()
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_missing_intro_ignored(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         video = tmp_path / "main.mp4"
@@ -240,7 +240,7 @@ class TestVideoAssemblerIntroOutro:
 
 
 class TestVideoAssemblerAssembleSequence:
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_missing_recording(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         config = {
@@ -250,7 +250,7 @@ class TestVideoAssemblerAssembleSequence:
         result = va.assemble_sequence("seq01", "fr", tmp_path, config)
         assert result is None
 
-    @patch("video_automation.core.video_assembler._check_ffmpeg")
+    @patch("narractive.core.video_assembler._check_ffmpeg")
     def test_dry_run(self, mock_check, tmp_path):
         va = VideoAssembler({"final_dir": str(tmp_path)})
         # Create required files
@@ -267,6 +267,6 @@ class TestVideoAssemblerAssembleSequence:
             "output": {"final_dir": str(tmp_path / "output" / "fr" / "final")},
             "capture": {},
         }
-        with patch("video_automation.core.video_assembler.get_media_duration", return_value=10.0):
+        with patch("narractive.core.video_assembler.get_media_duration", return_value=10.0):
             result = va.assemble_sequence("seq01", "fr", tmp_path, config, dry_run=True)
         assert result is not None
