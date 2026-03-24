@@ -1,0 +1,29 @@
+[general]
+name=Narractive
+qgisMinimumVersion=3.28
+description=Automated video narration pipeline integrated with QGIS
+version=0.6.0
+author=Narractive Contributors
+email=contact@narractive.io
+
+about=Narractive automates the production of narrated GIS video tutorials
+      directly from QGIS. The dock panel lets you run the video pipeline,
+      generate TTS narration, assemble the final video, and manage QGIS
+      map snapshots — all without leaving QGIS.
+
+tracker=https://github.com/imagodata/narractive/issues
+repository=https://github.com/imagodata/narractive
+
+hasProcessingProvider=no
+homepage=https://github.com/imagodata/narractive
+category=Plugins
+icon=icon.png
+experimental=False
+deprecated=False
+
+tags=video,narration,automation,tutorial,tts
+
+changelog=
+    0.6.0 - Sprint 6: QGIS plugin dock panel, snapshot API, controller factory
+    0.5.0 - Sprint 5: TTS plugin architecture, pipeline state persistence
+    0.4.0 - Sprint 4: Chapter markers, WebVTT subtitles, video intro/outro

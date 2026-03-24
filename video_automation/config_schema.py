@@ -132,6 +132,11 @@ if _PYDANTIC_AVAILABLE:
     class LanguageEntry(BaseModel):
         voice: str | None = None
 
+    class QGISConfig(BaseModel):
+        mode: str = "auto"  # auto | pyautogui | pyqgis | headless
+        prefix_path: str | None = None
+        project_path: str | None = None
+
     class NarractiveConfig(BaseModel):
         obs: ObsConfig = Field(default_factory=ObsConfig)
         app: AppConfig = Field(default_factory=AppConfig)
@@ -142,6 +147,7 @@ if _PYDANTIC_AVAILABLE:
         capture: CaptureConfig = Field(default_factory=CaptureConfig)
         output: OutputConfig = Field(default_factory=OutputConfig)
         languages: dict[str, Any] = Field(default_factory=dict)
+        qgis: QGISConfig = Field(default_factory=QGISConfig)
 
 else:
     # Stubs when pydantic is not installed

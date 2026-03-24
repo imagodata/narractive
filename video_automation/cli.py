@@ -997,3 +997,148 @@ def cmd_report(
         with open(out, "w", encoding="utf-8") as f:
             _json.dump(rpt.to_dict(), f, indent=2, ensure_ascii=False)
         click.echo(f"  JSON report written to {out}")
+
+
+# ── `narractive snapshot` group ───────────────────────────────────────────
+
+
+@cli.group("snapshot")
+def snapshot_group() -> None:
+    """Manage QGIS map snapshots (capture, restore, list)."""
+
+
+@snapshot_group.command("capture")
+@click.argument("name")
+def snapshot_capture(name: str) -> None:
+    """Capture the current QGIS map state and save as NAME.
+
+    The snapshot is saved to diagrams/snapshots/<NAME>.json.
+    Requires a running QGIS session with PyQGIS available.
+    """
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    try:
+        snap = QGISSnapshot.capture()
+        path = snap.save(name)
+        click.echo(f"  ok Snapshot '{name}' saved to {path}")
+    except ImportError as exc:
+        click.echo(f"  !! {exc}")
+        sys.exit(1)
+    except Exception as exc:
+        click.echo(f"  !! Error capturing snapshot: {exc}")
+        sys.exit(1)
+
+
+@snapshot_group.command("restore")
+@click.argument("name")
+def snapshot_restore(name: str) -> None:
+    """Restore a previously saved QGIS map snapshot by NAME.
+
+    Looks for diagrams/snapshots/<NAME>.json.
+    Requires a running QGIS session with PyQGIS available.
+    """
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    snap_path = QGISSnapshot.snapshot_dir() / f"{name}.json"
+    if not snap_path.exists():
+        click.echo(f"  !! Snapshot not found: {snap_path}")
+        sys.exit(1)
+
+    try:
+        snap = QGISSnapshot.load(snap_path)
+        snap.restore()
+        click.echo(f"  ok Snapshot '{name}' restored.")
+    except ImportError as exc:
+        click.echo(f"  !! {exc}")
+        sys.exit(1)
+    except Exception as exc:
+        click.echo(f"  !! Error restoring snapshot: {exc}")
+        sys.exit(1)
+
+
+@snapshot_group.command("list")
+def snapshot_list() -> None:
+    """List all available QGIS map snapshots."""
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    snapshots = QGISSnapshot.list_snapshots()
+    if not snapshots:
+        click.echo("No snapshots found in diagrams/snapshots/")
+        return
+
+    click.echo(f"\n  QGIS Snapshots ({len(snapshots)} found)\n  " + "-" * 50)
+    for p in snapshots:
+        try:
+            import json as _json_mod
+            with open(p, encoding="utf-8") as f:
+                data = _json_mod.load(f)
+            created = data.get("created_at", "unknown")
+            n_layers = len(data.get("layers", []))
+            click.echo(f"  {p.stem:<30}  {n_layers} layers  {created[:19]}")
+        except Exception:
+            click.echo(f"  {p.stem}")
+    click.echo()
+
+
+# ── `narractive qgis-plugin install` ─────────────────────────────────────
+
+
+def _default_qgis_plugins_dir() -> Path:
+    """Return the default QGIS 3 plugins directory for the current OS."""
+    if sys.platform.startswith("linux"):
+        return (
+            Path.home()
+            / ".local/share/QGIS/QGIS3/profiles/default/python/plugins"
+        )
+    elif sys.platform == "darwin":
+        return (
+            Path.home()
+            / "Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins"
+        )
+    else:
+        # Windows
+        appdata = Path(
+            __import__("os").environ.get("APPDATA", Path.home() / "AppData" / "Roaming")
+        )
+        return appdata / "QGIS/QGIS3/profiles/default/python/plugins"
+
+
+@cli.command("qgis-plugin")
+@click.argument("action", type=click.Choice(["install"]))
+@click.option(
+    "--qgis-plugins-dir",
+    "qgis_plugins_dir",
+    type=click.Path(dir_okay=True, file_okay=False),
+    default=None,
+    help="Path to the QGIS plugins directory. Defaults to the standard location for your OS.",
+)
+def cmd_qgis_plugin(action: str, qgis_plugins_dir: str | None) -> None:
+    """Manage the Narractive QGIS plugin.
+
+    ACTION: install — copy the plugin into the QGIS plugins directory.
+
+    Examples::
+
+        narractive qgis-plugin install
+        narractive qgis-plugin install --qgis-plugins-dir /path/to/plugins
+    """
+    import shutil
+
+    if action == "install":
+        # Source: video_automation/qgis_plugin/
+        src = Path(__file__).parent / "qgis_plugin"
+        if not src.exists():
+            click.echo(f"  !! Plugin source not found: {src}")
+            sys.exit(1)
+
+        plugins_dir = Path(qgis_plugins_dir) if qgis_plugins_dir else _default_qgis_plugins_dir()
+        dest = plugins_dir / "narractive"
+
+        click.echo(f"  Installing Narractive plugin to {dest} ...")
+        plugins_dir.mkdir(parents=True, exist_ok=True)
+
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(str(src), str(dest))
+        click.echo(f"  ok Plugin installed at {dest}")
+        click.echo("  Restart QGIS and enable 'Narractive' in Plugin Manager.")
