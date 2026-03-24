@@ -82,3 +82,14 @@ Result: Sprint 4 clôturé et Sprint 5 implémenté.
 |-------|---------|----------------|
 | #12 | **Pipeline state persistence** | `pipeline_state.py` — état JSON dans `output/.narractive-state.json`, flags `--resume`, `--reset`, `--status` |
 | #13 | **Plugin TTS architecture** | `tts_base.py` — ABC `TTSEngine`,
+
+
+## [2026-03-24 15:58]
+Delegate task: deleguer narractive sa partie a dev dans des issues egalement
+Result: 3 issues créées sur `imagodata/narractive` pour la partie Narractive de l'intégration FilterMate API :
+
+| # | Titre | Label |
+|---|-------|-------|
+| [#29](https://github.com/imagodata/narractive/issues/29) | `feat: FilterMate HTTP client (filtermate_client.py)` | enhancement |
+| [#30](https://github.com/imagodata/narractive/issues/30) | `feat: adapter seq04_filtering_demo pour piloter FilterMate via API` | enhancement |
+| [#31](https://github.com/imagodata/narractive/issues/31) | `test: FilterM
