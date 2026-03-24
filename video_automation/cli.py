@@ -173,7 +173,7 @@ def cli(ctx, config, seq_pkg, run_all, sequence, start_from, resume, reset_state
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Subcommands that manage their own config loading
-    if ctx.invoked_subcommand in ("init", "validate-config", "preview", "report"):
+    if ctx.invoked_subcommand in ("init", "validate-config", "preview", "report", "snapshot", "qgis-plugin"):
         return
 
     # Find config
@@ -997,3 +997,175 @@ def cmd_report(
         with open(out, "w", encoding="utf-8") as f:
             _json.dump(rpt.to_dict(), f, indent=2, ensure_ascii=False)
         click.echo(f"  JSON report written to {out}")
+
+
+# ── QGIS Snapshot commands ─────────────────────────────────────────────────
+
+
+@cli.group("snapshot")
+def snapshot_group() -> None:
+    """Capture and restore QGIS project state snapshots."""
+
+
+@snapshot_group.command("capture")
+@click.argument("name")
+@click.option(
+    "--dir",
+    "snapshot_dir",
+    default="diagrams/snapshots",
+    show_default=True,
+    help="Directory to store snapshots.",
+)
+def cmd_snapshot_capture(name: str, snapshot_dir: str) -> None:
+    """Capture the current QGIS state and save as NAME.json.
+
+    Must be run inside a QGIS Python console or from a session where
+    qgis.utils.iface is available.
+
+    Example::
+
+        narractive snapshot capture scene_A
+    """
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    snap = QGISSnapshot.capture()
+    out = Path(snapshot_dir) / f"{name}.json"
+    snap.save(out)
+    click.echo(f"Snapshot saved: {out}")
+
+
+@snapshot_group.command("restore")
+@click.argument("name")
+@click.option(
+    "--dir",
+    "snapshot_dir",
+    default="diagrams/snapshots",
+    show_default=True,
+    help="Directory where snapshots are stored.",
+)
+def cmd_snapshot_restore(name: str, snapshot_dir: str) -> None:
+    """Restore QGIS state from snapshot NAME.
+
+    Example::
+
+        narractive snapshot restore scene_A
+    """
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    path = Path(snapshot_dir) / f"{name}.json"
+    if not path.exists():
+        click.echo(f"Snapshot not found: {path}", err=True)
+        raise SystemExit(1)
+    snap = QGISSnapshot.load(path)
+    snap.restore()
+    click.echo(f"Snapshot restored: {name}")
+
+
+@snapshot_group.command("list")
+@click.option(
+    "--dir",
+    "snapshot_dir",
+    default="diagrams/snapshots",
+    show_default=True,
+    help="Directory to scan for snapshots.",
+)
+def cmd_snapshot_list(snapshot_dir: str) -> None:
+    """List available snapshots.
+
+    Example::
+
+        narractive snapshot list
+    """
+    from video_automation.core.qgis_snapshot import QGISSnapshot
+
+    snaps = QGISSnapshot.list_snapshots(snapshot_dir)
+    if not snaps:
+        click.echo(f"No snapshots found in {snapshot_dir}/")
+        return
+    click.echo(f"Snapshots in {snapshot_dir}/:")
+    for p in snaps:
+        click.echo(f"  {p.stem}")
+
+
+# ── QGIS Plugin commands ───────────────────────────────────────────────────
+
+
+@cli.group("qgis-plugin")
+def qgis_plugin_group() -> None:
+    """Manage the Narractive QGIS plugin."""
+
+
+@qgis_plugin_group.command("install")
+@click.option(
+    "--qgis-plugins-dir",
+    "plugins_dir",
+    default=None,
+    help="Path to the QGIS user plugins directory. Auto-detected if not set.",
+)
+def cmd_qgis_plugin_install(plugins_dir: str | None) -> None:
+    """Copy the Narractive plugin into the QGIS plugins directory.
+
+    The plugin is installed at:
+    ``<qgis-plugins-dir>/narractive/``
+
+    Then restart QGIS and enable the plugin via Plugins → Manage plugins.
+
+    Example::
+
+        narractive qgis-plugin install
+        narractive qgis-plugin install --qgis-plugins-dir /path/to/plugins
+    """
+    import shutil
+    import sys
+
+    # Locate the plugin source inside this package
+    import video_automation.qgis_plugin as _qgis_plugin_module
+
+    src = Path(_qgis_plugin_module.__file__).parent
+
+    # Determine default plugins dir
+    if plugins_dir is None:
+        if sys.platform == "win32":
+            import os
+
+            base = os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")
+            plugins_dir = str(
+                Path(base)
+                / "QGIS"
+                / "QGIS3"
+                / "profiles"
+                / "default"
+                / "python"
+                / "plugins"
+            )
+        elif sys.platform == "darwin":
+            plugins_dir = str(
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / "QGIS"
+                / "QGIS3"
+                / "profiles"
+                / "default"
+                / "python"
+                / "plugins"
+            )
+        else:
+            plugins_dir = str(
+                Path.home()
+                / ".local"
+                / "share"
+                / "QGIS"
+                / "QGIS3"
+                / "profiles"
+                / "default"
+                / "python"
+                / "plugins"
+            )
+
+    dest = Path(plugins_dir) / "narractive"
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest)
+    click.echo(f"Plugin installed: {dest}")
+    click.echo("Restart QGIS and enable 'Narractive' via Plugins → Manage plugins.")
